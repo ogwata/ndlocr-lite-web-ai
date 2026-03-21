@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
 import type { OCRResult, TextBlock } from '../../types/ocr'
+import type { AIConnector } from '../../types/ai'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
+import { DiffView } from './DiffView'
 
 interface TextEditorProps {
   result: OCRResult | null
@@ -9,7 +11,15 @@ interface TextEditorProps {
   selectedPageBlockText: string | null
   lang: 'ja' | 'en'
   onTextChange?: (text: string) => void
+  aiConnector: AIConnector | null
+  imageDataUrl?: string
 }
+
+type ProofreadState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'done'; originalText: string; correctedText: string }
+  | { status: 'error'; message: string }
 
 export function TextEditor({
   result,
@@ -18,11 +28,14 @@ export function TextEditor({
   selectedPageBlockText,
   lang,
   onTextChange,
+  aiConnector,
+  imageDataUrl,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [includeFileName, setIncludeFileName] = useState(false)
   const [ignoreNewlines, setIgnoreNewlines] = useState(false)
+  const [proofreadState, setProofreadState] = useState<ProofreadState>({ status: 'idle' })
 
   // editedText が null なら result.fullText を使う
   const displayText = editedText ?? result?.fullText ?? ''
@@ -36,11 +49,12 @@ export function TextEditor({
     [onTextChange],
   )
 
-  // result が変わったら編集状態をリセット
+  // result が変わったら編集状態・校正状態をリセット
   const [prevResultId, setPrevResultId] = useState<string | null>(null)
   if (result && result.id !== prevResultId) {
     setPrevResultId(result.id)
     setEditedText(null)
+    setProofreadState({ status: 'idle' })
   }
 
   const applyOptions = (text: string) =>
@@ -75,6 +89,39 @@ export function TextEditor({
     downloadText(allText, 'ocr_results')
   }
 
+  // AI校正実行
+  const handleProofread = useCallback(async () => {
+    if (!aiConnector || !result) return
+    const textToProofread = editedText ?? result.fullText
+    setProofreadState({ status: 'loading' })
+    try {
+      const proofResult = await aiConnector.proofread(textToProofread, imageDataUrl ?? '')
+      setProofreadState({
+        status: 'done',
+        originalText: textToProofread,
+        correctedText: proofResult.correctedText,
+      })
+    } catch (err) {
+      setProofreadState({
+        status: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }, [aiConnector, result, editedText, imageDataUrl])
+
+  // 校正結果を全て適用
+  const handleAcceptAll = useCallback(() => {
+    if (proofreadState.status !== 'done') return
+    setEditedText(proofreadState.correctedText)
+    onTextChange?.(proofreadState.correctedText)
+    setProofreadState({ status: 'idle' })
+  }, [proofreadState, onTextChange])
+
+  // 校正結果を全て却下
+  const handleRejectAll = useCallback(() => {
+    setProofreadState({ status: 'idle' })
+  }, [])
+
   if (!result) {
     return (
       <div className="text-editor empty">
@@ -83,18 +130,54 @@ export function TextEditor({
     )
   }
 
+  const showDiff = proofreadState.status === 'done'
+
   return (
     <div className="text-editor">
-      {/* ヘッダー: ファイル名と統計 */}
+      {/* ヘッダー: タイトル + ボタン群（AI校正 / Copy / DL） */}
       <div className="text-editor-header">
-        <span className="text-editor-filename">{result.fileName}</span>
-        <span className="text-editor-stats">
-          {result.textBlocks.length}
-          {lang === 'ja' ? ' 領域' : ' regions'}
-          {' · '}
-          {(result.processingTimeMs / 1000).toFixed(1)}s
-        </span>
+        <div className="text-editor-header-left">
+          <span className="text-editor-label">OCR result</span>
+          <span className="text-editor-stats">
+            {result.textBlocks.length}
+            {lang === 'ja' ? ' 領域' : ' regions'}
+            {' · '}
+            {(result.processingTimeMs / 1000).toFixed(1)}s
+          </span>
+        </div>
+        <div className="text-editor-header-buttons">
+          <button
+            className="btn btn-ai"
+            onClick={handleProofread}
+            disabled={!aiConnector || proofreadState.status === 'loading' || result.textBlocks.length === 0}
+            title={!aiConnector ? (lang === 'ja' ? '設定でAI接続を構成してください' : 'Configure AI connection in Settings') : ''}
+          >
+            {proofreadState.status === 'loading'
+              ? (lang === 'ja' ? 'AI校正中...' : 'Proofreading...')
+              : (lang === 'ja' ? 'AI校正' : 'AI Proofread')}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handleCopy}>
+            {copied
+              ? lang === 'ja' ? 'コピーしました！' : 'Copied!'
+              : lang === 'ja' ? 'コピー' : 'Copy'}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handleDownload}>
+            {lang === 'ja' ? 'DL' : 'DL'}
+          </button>
+        </div>
       </div>
+
+      {/* AI校正ステータス表示 */}
+      {(proofreadState.status === 'loading' || proofreadState.status === 'error') && (
+        <div className="text-editor-ai-status">
+          {proofreadState.status === 'loading' && <span className="ai-bar-spinner" />}
+          {proofreadState.status === 'error' && (
+            <span className="ai-bar-error" title={proofreadState.message}>
+              {lang === 'ja' ? '校正エラー' : 'Proofread Error'}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 選択ブロックの表示 */}
       {selectedPageBlockText != null && (
@@ -114,12 +197,25 @@ export function TextEditor({
         </div>
       )}
 
-      {/* 編集可能テキストエリア */}
+      {/* メイン: テキストエリア or 差分表示 */}
       <div className="text-editor-body">
         {result.textBlocks.length === 0 ? (
           <p className="text-editor-empty-text">
             {lang === 'ja' ? 'テキストが検出されませんでした' : 'No text detected'}
           </p>
+        ) : showDiff ? (
+          <DiffView
+            originalText={proofreadState.originalText}
+            correctedText={proofreadState.correctedText}
+            onAcceptAll={handleAcceptAll}
+            onRejectAll={handleRejectAll}
+            onApplySelective={(text) => {
+              setEditedText(text)
+              onTextChange?.(text)
+              setProofreadState({ status: 'idle' })
+            }}
+            lang={lang}
+          />
         ) : (
           <textarea
             className="text-editor-textarea"
@@ -130,8 +226,8 @@ export function TextEditor({
         )}
       </div>
 
-      {/* アクションバー */}
-      <div className="text-editor-actions">
+      {/* フッターオプション */}
+      <div className="text-editor-footer">
         <div className="text-editor-options">
           <label className="text-editor-option">
             <input
@@ -150,21 +246,11 @@ export function TextEditor({
             {lang === 'ja' ? '改行を無視' : 'Ignore newlines'}
           </label>
         </div>
-        <div className="text-editor-buttons">
-          <button className="btn btn-primary" onClick={handleCopy}>
-            {copied
-              ? lang === 'ja' ? 'コピーしました！' : 'Copied!'
-              : lang === 'ja' ? 'コピー' : 'Copy'}
+        {results.length > 1 && (
+          <button className="btn btn-secondary btn-sm" onClick={handleDownloadAll}>
+            {lang === 'ja' ? '全てDL' : 'Download All'}
           </button>
-          <button className="btn btn-secondary" onClick={handleDownload}>
-            {lang === 'ja' ? 'ダウンロード' : 'Download'}
-          </button>
-          {results.length > 1 && (
-            <button className="btn btn-secondary" onClick={handleDownloadAll}>
-              {lang === 'ja' ? '全てDL' : 'Download All'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )

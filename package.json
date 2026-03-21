@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "diff-match-patch": "^1.0.5",
     "heic2any": "^0.0.4",
     "js-yaml": "^4.1.0",
     "onnxruntime-web": "^1.20.0",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/diff-match-patch": "^1.0.36",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",

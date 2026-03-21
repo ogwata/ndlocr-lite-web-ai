@@ -31,10 +31,8 @@ export function Header({
   return (
     <header className="header">
       <button className="header-title" onClick={onLogoClick}>
-        <h1>NDLOCR-Lite Web</h1>
-        <span className="header-subtitle">
-          {lang === 'ja' ? 'ブラウザで動く日本語OCR' : 'Japanese OCR in the Browser'}
-        </span>
+        <h1>NDLOCR-Lite Web AI</h1>
+        <span className="header-version">v3.0</span>
       </button>
       <div className="header-actions">
         <span className={statusClass} title={statusText}>

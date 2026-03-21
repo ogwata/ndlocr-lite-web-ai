@@ -17,7 +17,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - **PDF処理:** pdfjs-dist 4.9.0
 - **OCR処理:** Web Worker（非同期）
 - **モデルキャッシュ:** IndexedDB
-- **差分表示:** diff-match-patch（追加予定）
+- **差分表示:** diff-match-patch
 - **状態管理:** React Context + useReducer
 - **デプロイ:** Netlify（COOP/COEPヘッダー必須）
 
@@ -77,20 +77,167 @@ ndlocr-lite-web-ai/
 
 - [x] Phase 1: フォーク＆セットアップ
 - [x] Phase 2: レイアウト改修（SplitView、TextEditor、ズーム/パン）
-- [ ] Phase 3: AI接続機能（Direct API / MCP Server） ← **現在ここ**
-- [ ] Phase 4: AI校正機能
+- [x] Phase 3: AI接続機能（Direct API / MCP Server、設定パネル拡張）
+- [ ] Phase 4: AI校正機能 ← **現在ここ（UIモック準拠の改修中）**
 - [ ] Phase 5: 仕上げ・デプロイ
+
+## UI設計仕様
+
+### メイン画面レイアウト
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ [N] NDLOCR-Lite Web AI  v3.0          [AI connected] [Settings] │  ← ヘッダーバー
+├───────────────────────────┬─────────────────────────────────────┤
+│                           │  OCR result    [AI校正][Copy][DL]   │
+│   Original image          │                                     │
+│                           │  第八章　職員、庁舎、財政、          │
+│   ┌───┐ ┌───┐ ┌──┐       │  記念行事等                         │
+│   │   │ │   │ │  │       │                                     │
+│   │縦 │ │縦 │ │縦│       │  一、職員                            │
+│   │書 │ │書 │ │書│       │  Ａ　司書職員の研修                  │
+│   │テ │ │テ │ │テ│       │                                     │
+│   │キ │ │キ │ │キ│       │  昭和二十六年度（第四回）研修に      │
+│   │ス │ │ス │ │ス│       │  引続き、昭和二十七年度……           │
+│   │ト │ │ト │ │ト│       │                                     │
+│   └───┘ └───┘ └──┘       │  ██本年度も單位██ → 本年度も単位    │
+│                           │   ↑赤背景(削除)    ↑緑背景(追加)    │
+│   page 1/25  1024x1536px  │                                     │
+├───────────────────────────┴─────────────────────────────────────┤
+│ [Upload image/PDF]                OCR:2.3s  AI:1.1s  3corrections│  ← ボトムバー
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 各パネルの仕様
+
+**ヘッダーバー:**
+- 左: アプリアイコン + アプリ名 + バージョンバッジ
+- 右: AI接続ステータスバッジ（connected=緑 / disconnected=灰）+ Settingsボタン
+
+**左パネル（ImageViewer）:**
+- 元画像の表示（ズーム/パン対応済み）
+- OCR検出されたテキスト行の矩形をオーバーレイ（青枠、半透明）
+- 画像下部にページ番号（page N/M）と画像サイズ表示
+
+**右パネル（TextEditor）:**
+- OCR結果の編集可能テキストエリア
+- フォント: monospace、サイズ: 13-14px、line-height: 1.9
+- ビューポート高さの70-80%、overflow-y: auto でスクロール可能
+- パネル上部にボタン群: 「AI校正」（青アクセント）「Copy」「Download」
+- AI校正後の差分表示: 削除部分＝赤背景、追加部分＝緑背景のインライン表示
+- 個別のaccept/reject UI
+
+**SplitView:**
+- 左右パネルのリサイズ可能スプリッタ（デフォルト50:50）
+
+**ボトムツールバー:**
+- 左: 「Upload image/PDF」ボタン（青アクセント）
+- 右: OCR処理時間、AI校正時間、修正件数の表示
+
+### 設定パネル（Settingsモーダル）
+
+```
+┌─────────────────────────────────────────┐
+│ AI settings                              │
+│ Configure AI connection for proofreading │
+├─────────────────────────────────────────┤
+│                                          │
+│ Connection type                          │
+│ ┌──────────────┐ ┌──────────────┐       │
+│ │ ★Direct API  │ │  MCP server  │       │
+│ └──────────────┘ └──────────────┘       │
+│                                          │
+│ Provider                                 │
+│ ┌──────────────────────────────────┐    │
+│ │ Anthropic (Claude)           ▼   │    │
+│ └──────────────────────────────────┘    │
+│                                          │
+│ API key                                  │
+│ ┌──────────────────────────────────┐    │
+│ │ sk-ant-xxxx...xxxx               │    │
+│ └──────────────────────────────────┘    │
+│ ⓘ Stored locally. Never sent to server. │
+│                                          │
+│ Model                                    │
+│ ┌──────────────────────────────────┐    │
+│ │ claude-sonnet-4-20250514     ▼   │    │
+│ └──────────────────────────────────┘    │
+│                                          │
+│ Proofreading prompt                      │
+│ ┌──────────────────────────────────┐    │
+│ │ You are an expert OCR proof-     │    │
+│ │ reader for historical Japanese   │    │
+│ │ documents. Compare the OCR text  │    │
+│ │ with the original image and fix  │    │
+│ │ recognition errors. Preserve     │    │
+│ │ original orthography (旧字体).   │    │
+│ │ Return only the corrected text.  │    │
+│ └──────────────────────────────────┘    │
+│                                          │
+│ ── MCP configuration (when selected) ──  │
+│                                          │
+│ MCP server URL                           │
+│ ┌──────────────────────────────────┐    │
+│ │ https://mcp.example.com/sse      │    │
+│ └──────────────────────────────────┘    │
+│                                          │
+│ Server name                              │
+│ ┌──────────────────────────────────┐    │
+│ │ my-ai-server                     │    │
+│ └──────────────────────────────────┘    │
+│                                          │
+│          [Test connection]  [Save]       │
+└─────────────────────────────────────────┘
+```
+
+### 設定パネルの仕様
+
+**接続モード切替（タブ形式）:**
+- Direct API（デフォルト選択）: ブラウザ→AI API直接呼び出し
+- MCP Server: MCPサーバーURL指定で任意のAIに接続
+
+**Direct APIモードの項目:**
+- Provider選択: Anthropic (Claude) / OpenAI (GPT) / Google (Gemini) / Groq / Custom endpoint
+- API key: password入力欄。localStorageにWeb Crypto APIで暗号化保存
+- Model: プロバイダに応じたモデル一覧（ドロップダウン）
+- Proofreading prompt: textarea。デフォルトで旧字体保存を指示する校正プロンプト
+
+**MCP Serverモードの項目:**
+- MCP server URL: SSEエンドポイントのURL
+- Server name: 識別用の名前
+
+**アクション:**
+- Test connection: 接続テスト（成功/失敗をフィードバック）
+- Save: 設定をlocalStorageに保存
+
+### AI校正フロー
+
+```
+[AI校正ボタン] クリック
+  → ローディング表示
+  → 現在のOCRテキスト + 元画像(base64) を AI に送信
+  → AI が画像とテキストを比較、修正テキストを返却
+  → diff-match-patch で元テキストと修正テキストを比較
+  → テキストエリア上に差分をインライン表示:
+      削除部分 → 赤背景 + 取り消し線
+      追加部分 → 緑背景
+  → 各差分箇所に accept(✓) / reject(✗) ボタン表示
+  → ボトムバーに修正件数・処理時間を表示
+```
 
 ## 重要な制約・ルール
 
 ### COOP/COEPヘッダー
+
 ONNX Runtime WASMがSharedArrayBufferを使うため、以下のレスポンスヘッダーが必須。netlify.toml で設定済み。
+
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
 ### コーディング規約
+
 - 言語: TypeScript（strict mode）
 - コンポーネント: React関数コンポーネント + Hooks
 - スタイル: 既存のCSSファイルの規約に従う
@@ -98,12 +245,14 @@ Cross-Origin-Embedder-Policy: require-corp
 - 日本語コメント可（UIテキストは日英両対応を維持）
 
 ### AI校正関連の設計方針
+
 - AIへの接続は2モード: Direct API（ブラウザ→AI API直接）と MCP Server
 - APIキーはlocalStorage + Web Crypto APIで暗号化保存。サーバーには送信しない
 - 歴史的文書の旧字体を現代字体に変換しないこと（デフォルトプロンプトで明示）
 - 差分表示: 削除＝赤背景、追加＝緑背景のインラインハイライト
 
 ### ライセンス
+
 - 本プロジェクトの追加コード: MIT License
 - OCRモデル・アルゴリズム: NDLOCR-Lite（国立国会図書館、CC BY 4.0）
 - Web移植ベースコード: ndlocrlite-web（橋本雄太氏）

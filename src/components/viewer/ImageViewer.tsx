@@ -10,6 +10,8 @@ interface ImageViewerProps {
   pageBlocks?: PageBlock[]
   selectedPageBlock?: PageBlock | null
   onPageBlockSelect?: (block: PageBlock) => void
+  pageIndex?: number    // 現在のページ (0-based)
+  totalPages?: number   // 全ページ数
 }
 
 const MIN_ZOOM = 0.5
@@ -25,6 +27,8 @@ export function ImageViewer({
   pageBlocks,
   selectedPageBlock,
   onPageBlockSelect,
+  pageIndex,
+  totalPages,
 }: ImageViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -244,6 +248,16 @@ export function ImageViewer({
             )}
           </div>
         </div>
+      </div>
+
+      {/* ページ番号と画像サイズ */}
+      <div className="image-viewer-info">
+        {totalPages != null && totalPages > 0 && (
+          <span>page {(pageIndex ?? 0) + 1}/{totalPages}</span>
+        )}
+        {naturalSize.width > 0 && (
+          <span>{naturalSize.width}x{naturalSize.height}px</span>
+        )}
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ import { useAISettings } from './hooks/useAISettings'
 import { Header } from './components/layout/Header'
 import { Footer } from './components/layout/Footer'
 import { SplitView } from './components/layout/SplitView'
+import { BottomToolbar } from './components/layout/BottomToolbar'
 import { FileDropZone } from './components/upload/FileDropZone'
 import { DirectoryPicker } from './components/upload/DirectoryPicker'
 import { ProgressBar } from './components/progress/ProgressBar'
@@ -51,6 +52,7 @@ export default function App() {
     switchProvider,
     connectionStatus: aiConnectionStatus,
     testAndConnect,
+    getConnector,
   } = useAISettings()
 
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
@@ -453,6 +455,8 @@ export default function App() {
                         pageBlocks={currentResult.pageBlocks}
                         selectedPageBlock={selectedPageBlock}
                         onPageBlockSelect={(block) => { setSelectedPageBlock(block); setSelectedBlock(null) }}
+                        pageIndex={selectedResultIndex}
+                        totalPages={processedImages.length}
                       />
                     )}
                     <p className="region-select-hint">
@@ -469,6 +473,8 @@ export default function App() {
                     selectedBlock={selectedBlock}
                     selectedPageBlockText={selectedPageBlockText}
                     lang={lang}
+                    aiConnector={getConnector()}
+                    imageDataUrl={currentResult?.imageDataUrl}
                   />
                 }
               />
@@ -476,6 +482,13 @@ export default function App() {
           </section>
         )}
       </main>
+
+      <BottomToolbar
+        lang={lang}
+        onUpload={handleClear}
+        ocrTimeMs={currentResult?.processingTimeMs}
+        hasResults={hasResults}
+      />
 
       <Footer lang={lang} />
 
