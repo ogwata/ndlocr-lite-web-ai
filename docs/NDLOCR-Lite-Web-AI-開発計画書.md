@@ -1,4 +1,4 @@
-# NDLOCR-Lite Web AI 開発計画書
+# NDLOCR-Lite Web AI Deluxe 開発計画書
 
 **AI校正機能付きブラウザ完結型OCR Webアプリケーション**
 
@@ -47,7 +47,7 @@ ndlocrlite-webは、橋本雄太氏（国立歴史民俗博物館）がNDLOCR-Li
 
 ### 2.3 ONNXモデル（約146MB）の詳細
 
-NDLOCR-Lite Web AIが使用する「約146MBのモデル」とは、OCR処理を行うための4つのONNX形式の機械学習モデルファイルの合計である。
+NDLOCR-Lite Web AI Deluxeが使用する「約146MBのモデル」とは、OCR処理を行うための4つのONNX形式の機械学習モデルファイルの合計である。
 
 | モデル | ファイル名 | サイズ | 用途 |
 |--------|-----------|--------|------|
@@ -288,7 +288,7 @@ interface ProofreadResult {
 
 ### 6.1 成果物のライセンス
 
-本プロジェクト（NDLOCR-Lite Web AI）の成果物には **MIT License** を適用する。
+本プロジェクト（NDLOCR-Lite Web AI Deluxe）の成果物には **MIT License** を適用する。
 
 MIT Licenseを選定した理由は以下のとおり。
 
@@ -310,7 +310,7 @@ CC BY 4.0の条件を満たすため、以下の帰属表示をREADMEおよびLI
 |------|-----------|--------|
 | NDLOCR-Lite（OCRモデル・アルゴリズム） | CC BY 4.0 | 国立国会図書館 |
 | ndlocrlite-web（Web移植コード） | LICENSEファイルに準拠 | 橋本雄太氏 |
-| NDLOCR-Lite Web AI（本プロジェクトの追加コード） | MIT License | 小形 |
+| NDLOCR-Lite Web AI Deluxe（本プロジェクトの追加コード） | MIT License | 小形 |
 
 ---
 

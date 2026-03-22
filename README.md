@@ -1,4 +1,4 @@
-# NDLOCR-Lite Web AI
+# NDLOCR-Lite Web AI Deluxe
 
 **AI校正機能付き ブラウザ完結型 日本語OCRツール**
 
@@ -142,13 +142,13 @@ npm run mcp-server
 
 ## ライセンス
 
-本プロジェクト（NDLOCR-Lite Web AI）の追加コードには **MIT License** を適用します。
+本プロジェクト（NDLOCR-Lite Web AI Deluxe）の追加コードには **MIT License** を適用します。
 
 | 対象 | ライセンス | 権利者 |
 |------|-----------|--------|
 | NDLOCR-Lite（OCRモデル・アルゴリズム） | CC BY 4.0 | 国立国会図書館 |
 | ndlocrlite-web（Web移植コード） | LICENSEファイルに準拠 | 橋本雄太氏 |
-| NDLOCR-Lite Web AI（本プロジェクトの追加コード） | MIT License | 小形 |
+| NDLOCR-Lite Web AI Deluxe（本プロジェクトの追加コード） | MIT License | 小形 |
 
 ## 帰属・クレジット
 

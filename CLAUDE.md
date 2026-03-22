@@ -1,8 +1,8 @@
-# NDLOCR-Lite Web AI
+# NDLOCR-Lite Web AI Deluxe
 
 ## プロジェクト概要
 
-NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにした、ブラウザ完結型OCR Webアプリケーションである。yuta1984/ndlocrlite-web をフォークし、AI校正機能を追加する。
+NDLOCR-Lite Web AI Deluxe は、国立国会図書館の NDLOCR-Lite をベースにした、ブラウザ完結型OCR Webアプリケーションである。yuta1984/ndlocrlite-web をフォークし、AI校正機能を追加する。
 
 - ブラウザ内でONNX Runtime Web（WASM）によるOCR推論を実行
 - サーバーに画像を送信しない完全クライアントサイド処理
@@ -102,7 +102,7 @@ ndlocr-lite-web-ai/
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ [N] NDLOCR-Lite Web AI  v0.1.0          [AI connected] [Settings] │  ← ヘッダーバー
+│ [N] NDLOCR-Lite Web AI Deluxe  v0.1.0          [AI connected] [Settings] │  ← ヘッダーバー
 ├───────────────────────────┬─────────────────────────────────────┤
 │                           │  OCR result  [AI校正][コピー][ダウンロード]│
 │   Original image          │                                     │
