@@ -45,9 +45,14 @@ export function Header({
         <button className="btn-icon" onClick={onOpenSettings} title={lang === 'ja' ? '設定' : 'Settings'}>
           ⚙️
         </button>
-        <button className="btn-lang" onClick={onToggleLanguage}>
-          {lang === 'ja' ? '日本語 ▾' : 'English ▾'}
-        </button>
+        <select
+          className="select-lang"
+          value={lang}
+          onChange={onToggleLanguage}
+        >
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+        </select>
       </div>
     </header>
   )
