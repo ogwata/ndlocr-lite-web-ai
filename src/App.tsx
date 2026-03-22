@@ -347,7 +347,7 @@ export default function App() {
 
               <div className="pending-viewer">
                 <button className="btn btn-primary btn-above-viewer" onClick={() => setIsReadyToProcess(true)}>
-                  {lang === 'ja' ? '認識を開始' : 'Start Recognition'}
+                  {lang === 'ja' ? 'OCRを開始' : 'Start OCR'}
                 </button>
                 <ImageViewer
                   imageDataUrl={pendingDataUrls[pendingImageIndex] ?? ''}
