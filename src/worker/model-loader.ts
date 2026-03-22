@@ -11,7 +11,8 @@ const STORE_NAME = 'models'
 export const MODEL_VERSION = '1.0.0'
 
 // モデル配信ベースURL（環境変数 VITE_MODEL_BASE_URL で指定、末尾スラッシュなし）
-const MODEL_BASE_URL = (import.meta.env.VITE_MODEL_BASE_URL as string | undefined) ?? ''
+// 空の場合は /models（public/models/ からの配信）をデフォルトにする
+const MODEL_BASE_URL = (import.meta.env.VITE_MODEL_BASE_URL as string | undefined) || '/models'
 
 // ONNXモデルのURL
 export const MODEL_URLS: Record<string, string> = {
