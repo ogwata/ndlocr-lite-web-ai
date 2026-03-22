@@ -6,7 +6,6 @@ import { DiffView } from './DiffView'
 
 interface TextEditorProps {
   result: OCRResult | null
-  results: OCRResult[]
   selectedBlock: TextBlock | null
   selectedPageBlockText: string | null
   lang: 'ja' | 'en'
@@ -23,7 +22,6 @@ type ProofreadState =
 
 export function TextEditor({
   result,
-  results,
   selectedBlock,
   selectedPageBlockText,
   lang,
@@ -60,9 +58,6 @@ export function TextEditor({
   const applyOptions = (text: string) =>
     ignoreNewlines ? text.replace(/\n/g, '') : text
 
-  const buildText = (r: OCRResult) =>
-    applyOptions(includeFileName ? `=== ${r.fileName} ===\n${r.fullText}` : r.fullText)
-
   const handleCopy = async () => {
     const text = applyOptions(displayText)
     try {
@@ -81,12 +76,6 @@ export function TextEditor({
       includeFileName ? `=== ${result.fileName} ===\n${text}` : text,
       result.fileName,
     )
-  }
-
-  const handleDownloadAll = () => {
-    if (results.length === 0) return
-    const allText = results.map((r) => buildText(r)).join('\n\n')
-    downloadText(allText, 'ocr_results')
   }
 
   // AI校正実行
@@ -162,7 +151,7 @@ export function TextEditor({
               : lang === 'ja' ? 'コピー' : 'Copy'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleDownload}>
-            {lang === 'ja' ? 'DL' : 'DL'}
+            {lang === 'ja' ? 'ダウンロード' : 'Download'}
           </button>
         </div>
       </div>
@@ -246,11 +235,6 @@ export function TextEditor({
             {lang === 'ja' ? '改行を無視' : 'Ignore newlines'}
           </label>
         </div>
-        {results.length > 1 && (
-          <button className="btn btn-secondary btn-sm" onClick={handleDownloadAll}>
-            {lang === 'ja' ? '全てDL' : 'Download All'}
-          </button>
-        )}
       </div>
     </div>
   )

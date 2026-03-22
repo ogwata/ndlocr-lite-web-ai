@@ -229,6 +229,12 @@ export default function App() {
   }, [isReadyToProcess]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClear = () => {
+    if (sessionResults.length > 0) {
+      const msg = lang === 'ja'
+        ? '現在のOCR結果は破棄されます。よろしいですか？'
+        : 'Current OCR results will be discarded. Continue?'
+      if (!window.confirm(msg)) return
+    }
     clearImages()
     setSessionResults([])
     setSelectedResultIndex(0)
@@ -531,7 +537,6 @@ export default function App() {
                 right={
                   <TextEditor
                     result={currentResult}
-                    results={sessionResults}
                     selectedBlock={selectedBlock}
                     selectedPageBlockText={selectedPageBlockText}
                     lang={lang}
