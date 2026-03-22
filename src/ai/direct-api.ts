@@ -84,7 +84,7 @@ async function fetchWithRetry(
 }
 
 /** エラーレスポンスをユーザー向けメッセージに変換 */
-function formatApiError(provider: string, status: number, body: string): Error {
+export function formatApiError(provider: string, status: number, body: string): Error {
   if (status === 401 || status === 403) {
     return new Error(`${provider}: Invalid API key or insufficient permissions.`)
   }
