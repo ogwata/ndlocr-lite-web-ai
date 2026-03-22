@@ -1136,19 +1136,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   position: relative;
   width: 100%;
   user-select: none;
-  overflow: hidden;
+  overflow: auto;
+  max-height: 75vh;
   border-radius: var(--radius);
   border: 1px solid var(--color-border);
   background: var(--color-bg);
 }
-.image-viewer.panning {
-  cursor: grabbing;
-}
 
 .image-viewer-transform {
+  position: relative;
   display: inline-block;
-  width: 100%;
-  transition: none;
+  min-width: 100%;
 }
 
 .viewer-image {

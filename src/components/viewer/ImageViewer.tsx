@@ -10,8 +10,8 @@ interface ImageViewerProps {
   pageBlocks?: PageBlock[]
   selectedPageBlock?: PageBlock | null
   onPageBlockSelect?: (block: PageBlock) => void
-  pageIndex?: number    // 現在のページ (0-based)
-  totalPages?: number   // 全ページ数
+  pageIndex?: number
+  totalPages?: number
 }
 
 const MIN_ZOOM = 0.5
@@ -37,16 +37,16 @@ export function ImageViewer({
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null)
 
-  // ズーム/パン状態
+  // ズーム状態
   const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [isPanning, setIsPanning] = useState(false)
-  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
 
-  // 画像が変わったらズーム/パンをリセット
+  // 画像が変わったらズームをリセット
   useEffect(() => {
     setZoom(1)
-    setPan({ x: 0, y: 0 })
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0
+      containerRef.current.scrollLeft = 0
+    }
   }, [imageDataUrl])
 
   useEffect(() => {
@@ -77,44 +77,28 @@ export function ImageViewer({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
-  // ホイールズーム
+  // ホイールズーム（Ctrl/Cmd+ホイールのみ。通常ホイールはスクロールに使う）
   const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return // 通常スクロールはブラウザに任せる
     e.preventDefault()
     const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
     setZoom((prev) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta)))
   }, [])
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // 中クリック or Spaceキー押下中 → パン
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      e.preventDefault()
-      setIsPanning(true)
-      panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
-      return
-    }
-
     if (!onRegionSelect) return
+    if (e.button !== 0) return
     const pos = getRelativePos(e)
     setDragStart(pos)
     setDragCurrent(pos)
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
-      const dx = e.clientX - panStart.current.x
-      const dy = e.clientY - panStart.current.y
-      setPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy })
-      return
-    }
     if (!dragStart) return
     setDragCurrent(getRelativePos(e))
   }
 
   const handleMouseUp = () => {
-    if (isPanning) {
-      setIsPanning(false)
-      return
-    }
     if (!dragStart || !dragCurrent || !onRegionSelect) {
       setDragStart(null)
       setDragCurrent(null)
@@ -133,7 +117,6 @@ export function ImageViewer({
       height: y2 - y1,
     }
 
-    // 選択範囲と重なるブロックを抽出
     const selected = textBlocks.filter((b) => {
       return b.x < x2 && b.x + b.width > x1 && b.y < y2 && b.y + b.height > y1
     })
@@ -149,7 +132,13 @@ export function ImageViewer({
 
   const handleZoomIn = () => setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP * 2))
   const handleZoomOut = () => setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP * 2))
-  const handleZoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
+  const handleZoomReset = () => {
+    setZoom(1)
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0
+      containerRef.current.scrollLeft = 0
+    }
+  }
 
   const selectionRect =
     dragStart && dragCurrent
@@ -161,7 +150,7 @@ export function ImageViewer({
         }
       : null
 
-  const isZoomed = zoom !== 1 || pan.x !== 0 || pan.y !== 0
+  const isZoomed = zoom !== 1
 
   return (
     <div className="image-viewer-wrap">
@@ -178,7 +167,7 @@ export function ImageViewer({
       </div>
 
       <div
-        className={`image-viewer ${isPanning ? 'panning' : ''}`}
+        className="image-viewer"
         ref={containerRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -189,8 +178,7 @@ export function ImageViewer({
         <div
           className="image-viewer-transform"
           style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: 'top left',
+            width: `${zoom * 100}%`,
           }}
         >
           <img
