@@ -1471,6 +1471,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: var(--color-text-secondary);
 }
 
+.diff-view-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  padding: 0.3rem 0.5rem 0;
+}
+
 /* ===== IMAGE VIEWER INFO ===== */
 .image-viewer-info {
   display: flex;

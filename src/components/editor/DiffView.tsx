@@ -137,6 +137,11 @@ export function DiffView({
             </button>
           )}
         </div>
+        <p className="diff-view-hint">
+          {lang === 'ja'
+            ? '各修正の ✓ で適用、✗ で却下。選んだ後「選択を適用」をクリック'
+            : 'Click ✓ to accept or ✗ to reject each change, then click "Apply Selected"'}
+        </p>
       </div>
       <div className="diff-view-body">
         {grouped.map((item, i) => {
