@@ -116,7 +116,7 @@ ndlocr-lite-web-ai/
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ [N] NDLOCR-Lite Web AI  v0.3.5   [🌙] [🌐] [AI connected] [Settings] │  ← ヘッダーバー
+│ [N] NDLOCR-Lite Web AI  v0.3.6   [🌙] [🌐] [AI connected] [Settings] │  ← ヘッダーバー
 ├───────────────────────────┬─────────────────────────────────────┤
 │                           │  OCR result  [AI校正][コピー][ダウンロード]│
 │   Original image          │                                     │
