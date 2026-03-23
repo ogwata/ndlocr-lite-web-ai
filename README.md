@@ -174,3 +174,36 @@ npm run mcp-server
 - **PARSeq:** [baudm/parseq](https://github.com/baudm/parseq)
 - **文字セット（NDLmoji.yaml）:** 国立国会図書館
 - **ndlocr-lite-web-ai-deluxe:** [somiyagawa/ndlocr-lite-web-ai-deluxe](https://github.com/somiyagawa/ndlocr-lite-web-ai-deluxe)（宮川創氏） — 画像前処理、ダークモード、多言語UI、縦書き表示等
+
+## 変更履歴
+
+### v0.3.0（2026-03-23）
+
+- TEI P5 XML / hOCR形式でのOCR結果エクスポート機能を追加
+- `requestIdleCallback`によるWorker遅延初期化で初期描画を高速化
+- pdfjs-distの動的importによるPDF遅延読み込み
+- Vite `manualChunks`によるチャンク分割（pdfjs-dist / heic2any / diff-match-patch）
+
+### v0.2.0（2026-03-23）
+
+- 画像前処理パネル（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・ページ分割）
+- ダークモード（OS設定追従）
+- 多言語UI拡張（韓国語・中国語繁体/簡体を追加、計5言語対応）
+- 縦書き表示モード
+- テキスト検索・置換機能
+- UIデザイン刷新
+- NDLMoji.yamlのfetch過多を修正（Workerごとに1回のみ）
+- LICENSEをデュアルライセンス形式（CC BY 4.0 + MIT）に更新
+
+### v0.1.0（2026-03-22）
+
+- 初回リリース
+- ブラウザ完結型OCR（ONNX Runtime Web / WASM）
+- AI校正機能（Direct API / MCP Server対応）
+- 左右分割ビュー（画像＋テキスト並列表示）
+- 差分表示（個別accept/reject、ctrl+zアンドゥ）
+- PDF・TIFF・HEIC対応、バッチ処理
+- 領域選択OCR
+- マルチスレッド文字認識
+- XY-Cutアルゴリズムによる読み順推定（段組み対応）
+- Netlifyデプロイ（COOP/COEPヘッダー対応）
