@@ -3,6 +3,8 @@ import type { OCRResult, TextBlock } from '../../types/ocr'
 import type { AIConnector } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
+import { downloadTEI } from '../../utils/exportTEI'
+import { downloadHOCR } from '../../utils/exportHOCR'
 import { DiffView } from './DiffView'
 import type { Language } from '../../i18n'
 
@@ -302,7 +304,13 @@ export function TextEditor({
               : lang === 'ja' ? 'コピー' : 'Copy'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleDownload}>
-            {lang === 'ja' ? 'ダウンロード' : 'Download'}
+            TXT
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => result && downloadTEI(result)} disabled={!result}>
+            TEI
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => result && downloadHOCR(result)} disabled={!result}>
+            hOCR
           </button>
         </div>
       </div>
