@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import type { DBRunEntry } from '../../types/db'
+import type { Language } from '../../i18n'
 
 interface HistoryPanelProps {
   runs: DBRunEntry[]
   onSelect: (entry: DBRunEntry) => void
   onClear: () => void
   onClose: () => void
-  lang: 'ja' | 'en'
+  lang: Language
 }
 
 export function HistoryPanel({ runs, onSelect, onClear, onClose, lang }: HistoryPanelProps) {

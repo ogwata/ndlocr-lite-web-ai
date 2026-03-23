@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { TextBlock } from '../../types/ocr'
+import type { Language } from '../../i18n'
 
 interface RegionOCRDialogProps {
   cropDataUrl: string
   isProcessing: boolean
   result: { textBlocks: TextBlock[]; fullText: string } | null
-  lang: 'ja' | 'en'
+  lang: Language
   onClose: () => void
 }
 

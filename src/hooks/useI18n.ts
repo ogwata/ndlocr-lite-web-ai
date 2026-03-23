@@ -15,8 +15,19 @@ export function useI18n() {
     [lang]
   )
 
-  const toggleLanguage = useCallback(() => {
-    const next: Language = lang === 'ja' ? 'en' : 'ja'
+  // For <select onChange> — reads value from the event
+  const toggleLanguage = useCallback((e?: React.ChangeEvent<HTMLSelectElement> | Language) => {
+    let next: Language
+    if (typeof e === 'string') {
+      next = e
+    } else if (e && 'target' in e) {
+      next = e.target.value as Language
+    } else {
+      // cycle fallback (unused but keeps compat)
+      const order: Language[] = ['ja', 'en', 'zh-CN', 'zh-TW', 'ko']
+      const idx = order.indexOf(lang)
+      next = order[(idx + 1) % order.length]
+    }
     setLang(next)
     localStorage.setItem(LANG_STORAGE_KEY, next)
   }, [lang])

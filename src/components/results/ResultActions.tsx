@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { OCRResult } from '../../types/ocr'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
+import type { Language } from '../../i18n'
 
 interface ResultActionsProps {
   results: OCRResult[]
   currentResult: OCRResult | null
-  lang: 'ja' | 'en'
+  lang: Language
 }
 
 export function ResultActions({ results, currentResult, lang }: ResultActionsProps) {

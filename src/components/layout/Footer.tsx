@@ -1,5 +1,7 @@
+import type { Language } from '../../i18n'
+
 interface FooterProps {
-  lang: 'ja' | 'en'
+  lang: Language
   githubUrl?: string
 }
 
@@ -63,6 +65,13 @@ export function Footer({ lang, githubUrl = 'https://github.com/ogwata/ndlocr-lit
         <div className="footer-credit-line">
           {lang === 'ja' ? 'AI校正機能: ' : 'AI proofreading: '}
           {lang === 'ja' ? '小形克宏（一般社団法人ビブリオスタイル）' : 'Katsuhiro Ogata (Bibliostyle)'}
+        </div>
+        <div className="footer-credit-line">
+          {lang === 'ja' ? 'UI拡張機能（ダークモード、デザイン、画像前処理）: ' : 'UI enhancements (dark mode, design, image preprocessing): '}
+          <a href="https://researchmap.jp/SoMiyagawa" target="_blank" rel="noopener noreferrer">
+            {lang === 'ja' ? '宮川創' : 'So Miyagawa'}
+          </a>
+          {lang === 'ja' ? '（筑波大学）' : ' (University of Tsukuba)'}
         </div>
       </div>
       <div className="footer-meta">

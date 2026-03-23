@@ -6,6 +6,7 @@ import { useOCRWorker } from './hooks/useOCRWorker'
 import { useFileProcessor } from './hooks/useFileProcessor'
 import { useResultCache } from './hooks/useResultCache'
 import { useAISettings } from './hooks/useAISettings'
+import { useTheme } from './hooks/useTheme'
 import { Header } from './components/layout/Header'
 import { Footer } from './components/layout/Footer'
 import { SplitView } from './components/layout/SplitView'
@@ -15,6 +16,7 @@ import { DirectoryPicker } from './components/upload/DirectoryPicker'
 import { ProgressBar } from './components/progress/ProgressBar'
 import { ImageViewer } from './components/viewer/ImageViewer'
 import { TextEditor } from './components/editor/TextEditor'
+import { ImagePreprocessPanel } from './components/viewer/ImagePreprocessPanel'
 import { HistoryPanel } from './components/results/HistoryPanel'
 import { SettingsModal } from './components/settings/SettingsModal'
 import { imageDataToDataUrl } from './utils/imageLoader'
@@ -54,6 +56,8 @@ export default function App() {
     getConnector,
   } = useAISettings()
 
+  const { theme, toggleTheme } = useTheme()
+
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
   const [selectedBlock, setSelectedBlock] = useState<TextBlock | null>(null)
@@ -66,6 +70,21 @@ export default function App() {
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
+
+  // 画像前処理状態
+  const [preprocessedUrls, setPreprocessedUrls] = useState<Record<number, string>>({})
+
+  const handlePreprocessed = useCallback((index: number, dataUrl: string) => {
+    setPreprocessedUrls(prev => ({ ...prev, [index]: dataUrl }))
+  }, [])
+
+  const handlePreprocessReset = useCallback((index: number) => {
+    setPreprocessedUrls(prev => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }, [])
 
   // pending 状態での ImageViewer 表示用（全解像度 DataUrl）
   const pendingDataUrls = useMemo(
@@ -241,6 +260,7 @@ export default function App() {
     setSelectedBlock(null)
     setSelectedPageBlock(null)
     setSelectedRegion(null)
+    setPreprocessedUrls({})
     resetState()
     setIsProcessing(false)
     setIsReadyToProcess(false)
@@ -342,6 +362,8 @@ export default function App() {
         onOpenHistory={() => setShowHistory(true)}
         onLogoClick={handleClear}
         aiConnectionStatus={aiConnectionStatus}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <main className="main">
@@ -400,8 +422,14 @@ export default function App() {
                     </button>
                   )}
                 </div>
-                <ImageViewer
+                <ImagePreprocessPanel
+                  lang={lang}
                   imageDataUrl={pendingDataUrls[pendingImageIndex] ?? ''}
+                  onProcessed={(url) => handlePreprocessed(pendingImageIndex, url)}
+                  onReset={() => handlePreprocessReset(pendingImageIndex)}
+                />
+                <ImageViewer
+                  imageDataUrl={preprocessedUrls[pendingImageIndex] ?? pendingDataUrls[pendingImageIndex] ?? ''}
                   textBlocks={[]}
                   selectedBlock={null}
                   onBlockSelect={() => {}}
@@ -502,8 +530,14 @@ export default function App() {
                   <div className="split-image-panel">
                     {currentResult && (
                       <>
-                        <ImageViewer
+                        <ImagePreprocessPanel
+                          lang={lang}
                           imageDataUrl={currentResult.imageDataUrl}
+                          onProcessed={(url) => handlePreprocessed(selectedResultIndex + 10000, url)}
+                          onReset={() => handlePreprocessReset(selectedResultIndex + 10000)}
+                        />
+                        <ImageViewer
+                          imageDataUrl={preprocessedUrls[selectedResultIndex + 10000] ?? currentResult.imageDataUrl}
                           textBlocks={currentResult.textBlocks}
                           selectedBlock={selectedBlock}
                           onBlockSelect={(block) => { setSelectedBlock(block); setSelectedPageBlock(null) }}
