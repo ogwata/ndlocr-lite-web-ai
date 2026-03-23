@@ -15,9 +15,12 @@ interface ImageViewerProps {
   totalPages?: number
 }
 
-const MIN_ZOOM = 0.5
+const MIN_ZOOM = 0.25
 const MAX_ZOOM = 5
 const ZOOM_STEP = 0.15
+const FIT_ZOOM = -1 // sentinel for "fit to container"
+
+type InteractionMode = 'pan' | 'select'
 
 export function ImageViewer({
   imageDataUrl,
@@ -36,21 +39,41 @@ export function ImageViewer({
   const imgRef = useRef<HTMLImageElement>(null)
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
+
+  // Zoom: FIT_ZOOM means "fit to container", otherwise explicit scale
+  const [zoom, setZoom] = useState<number>(FIT_ZOOM)
+
+  // Pan offset (pixels)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+
+  // Interaction mode: pan (drag to move) or select (drag to select region)
+  const [mode, setMode] = useState<InteractionMode>('pan')
+
+  // Drag state
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null)
+  const [isPanning, setIsPanning] = useState(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
 
-  // ズーム状態
-  const [zoom, setZoom] = useState(1)
+  // Compute effective zoom
+  const getEffectiveZoom = useCallback(() => {
+    if (zoom !== FIT_ZOOM) return zoom
+    if (!containerRef.current || naturalSize.width === 0) return 1
+    const container = containerRef.current
+    const scaleW = container.clientWidth / naturalSize.width
+    const scaleH = container.clientHeight / naturalSize.height
+    return Math.min(scaleW, scaleH, 1) // never upscale beyond 100%
+  }, [zoom, naturalSize])
 
-  // 画像が変わったらズームをリセット
+  const effectiveZoom = getEffectiveZoom()
+
+  // Reset on image change
   useEffect(() => {
-    setZoom(1)
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0
-      containerRef.current.scrollLeft = 0
-    }
+    setZoom(FIT_ZOOM)
+    setPanOffset({ x: 0, y: 0 })
   }, [imageDataUrl])
 
+  // Track image size
   useEffect(() => {
     const updateSize = () => {
       if (imgRef.current) {
@@ -64,14 +87,11 @@ export function ImageViewer({
       updateSize()
     }
     window.addEventListener('resize', updateSize)
-
-    // ResizeObserver で画像サイズの変化（ズーム等）を検知
     let observer: ResizeObserver | null = null
     if (img) {
       observer = new ResizeObserver(updateSize)
       observer.observe(img)
     }
-
     return () => {
       img?.removeEventListener('load', updateSize)
       window.removeEventListener('resize', updateSize)
@@ -88,63 +108,81 @@ export function ImageViewer({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
-  // ホイールズーム（Ctrl/Cmd+ホイールのみ。通常ホイールはスクロールに使う）
+  // Wheel zoom (Ctrl/Cmd + wheel, or just wheel)
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return // 通常スクロールはブラウザに任せる
+    if (!e.ctrlKey && !e.metaKey) return
     e.preventDefault()
     const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
-    setZoom((prev) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta)))
-  }, [])
+    setZoom((prev) => {
+      const current = prev === FIT_ZOOM ? getEffectiveZoom() : prev
+      return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, current + delta))
+    })
+  }, [getEffectiveZoom])
 
+  // Mouse down
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!onRegionSelect) return
     if (e.button !== 0) return
-    const pos = getRelativePos(e)
-    setDragStart(pos)
-    setDragCurrent(pos)
+    e.preventDefault()
+
+    if (mode === 'pan') {
+      setIsPanning(true)
+      panStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y }
+    } else if (mode === 'select' && onRegionSelect) {
+      const pos = getRelativePos(e)
+      setDragStart(pos)
+      setDragCurrent(pos)
+    }
   }
 
+  // Mouse move
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!dragStart) return
-    setDragCurrent(getRelativePos(e))
+    if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y,
+      })
+    } else if (dragStart) {
+      setDragCurrent(getRelativePos(e))
+    }
   }
 
+  // Mouse up
   const handleMouseUp = () => {
-    if (!dragStart || !dragCurrent || !onRegionSelect) {
-      setDragStart(null)
-      setDragCurrent(null)
+    if (isPanning) {
+      setIsPanning(false)
       return
     }
-    // スクリーン座標 → 元画像座標に変換
-    const x1 = Math.min(dragStart.x, dragCurrent.x) / scaleX
-    const y1 = Math.min(dragStart.y, dragCurrent.y) / scaleY
-    const x2 = Math.max(dragStart.x, dragCurrent.x) / scaleX
-    const y2 = Math.max(dragStart.y, dragCurrent.y) / scaleY
-
-    const bbox: BoundingBox = {
-      x: x1,
-      y: y1,
-      width: x2 - x1,
-      height: y2 - y1,
+    if (dragStart && dragCurrent && onRegionSelect) {
+      const x1 = Math.min(dragStart.x, dragCurrent.x) / scaleX
+      const y1 = Math.min(dragStart.y, dragCurrent.y) / scaleY
+      const x2 = Math.max(dragStart.x, dragCurrent.x) / scaleX
+      const y2 = Math.max(dragStart.y, dragCurrent.y) / scaleY
+      const bbox: BoundingBox = { x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
+      const MIN_DRAG = 15
+      if (bbox.width >= MIN_DRAG && bbox.height >= MIN_DRAG) {
+        onRegionSelect(bbox)
+      }
     }
-
-    const MIN_DRAG = 15
-    if (bbox.width >= MIN_DRAG && bbox.height >= MIN_DRAG) {
-      onRegionSelect(bbox)
-    }
-
     setDragStart(null)
     setDragCurrent(null)
   }
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP * 2))
-  const handleZoomOut = () => setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP * 2))
+  // Zoom controls
+  const handleZoomIn = () => {
+    setZoom((prev) => {
+      const current = prev === FIT_ZOOM ? getEffectiveZoom() : prev
+      return Math.min(MAX_ZOOM, current + ZOOM_STEP * 2)
+    })
+  }
+  const handleZoomOut = () => {
+    setZoom((prev) => {
+      const current = prev === FIT_ZOOM ? getEffectiveZoom() : prev
+      return Math.max(MIN_ZOOM, current - ZOOM_STEP * 2)
+    })
+  }
   const handleZoomReset = () => {
-    setZoom(1)
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0
-      containerRef.current.scrollLeft = 0
-    }
+    setZoom(FIT_ZOOM)
+    setPanOffset({ x: 0, y: 0 })
   }
 
   const selectionRect =
@@ -157,18 +195,50 @@ export function ImageViewer({
         }
       : null
 
-  const isZoomed = zoom !== 1
+  const displayedWidth = naturalSize.width * effectiveZoom
+  const displayedHeight = naturalSize.height * effectiveZoom
+  const zoomPercent = Math.round(effectiveZoom * 100)
+  const isFit = zoom === FIT_ZOOM
+  const cursorStyle = mode === 'pan' ? (isPanning ? 'grabbing' : 'grab') : 'crosshair'
 
   return (
     <div className="image-viewer-wrap">
-      {/* ズームコントロール */}
+      {/* Zoom + mode controls */}
       <div className="zoom-controls">
-        <button className="btn-zoom" onClick={handleZoomOut} title="Zoom out">−</button>
-        <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-        <button className="btn-zoom" onClick={handleZoomIn} title="Zoom in">+</button>
-        {isZoomed && (
-          <button className="btn-zoom btn-zoom-reset" onClick={handleZoomReset} title="Reset">
-            Reset
+        <button
+          className="btn-zoom btn-zoom-reset"
+          onClick={handleZoomReset}
+          title="Fit to view"
+          disabled={isFit && panOffset.x === 0 && panOffset.y === 0}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+          </svg>
+        </button>
+        <span className="zoom-controls-sep" />
+        <button className="btn-zoom" onClick={handleZoomOut} title="Zoom out (Ctrl+Scroll)">−</button>
+        <span className="zoom-level">{zoomPercent}%</span>
+        <button className="btn-zoom" onClick={handleZoomIn} title="Zoom in (Ctrl+Scroll)">+</button>
+        <span className="zoom-controls-sep" />
+        {/* Mode toggle */}
+        <button
+          className={`btn-zoom ${mode === 'pan' ? 'btn-zoom-active' : ''}`}
+          onClick={() => setMode('pan')}
+          title="Pan mode (drag to move)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-4 0v5" /><path d="M14 10V4a2 2 0 0 0-4 0v6" /><path d="M10 10.5V6a2 2 0 0 0-4 0v8a6 6 0 0 0 12 0v-2a2 2 0 0 0-4 0" />
+          </svg>
+        </button>
+        {onRegionSelect && (
+          <button
+            className={`btn-zoom ${mode === 'select' ? 'btn-zoom-active' : ''}`}
+            onClick={() => setMode('select')}
+            title="Select region mode"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2" />
+            </svg>
           </button>
         )}
       </div>
@@ -181,11 +251,17 @@ export function ImageViewer({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
+        style={{ cursor: cursorStyle, overflow: 'hidden' }}
       >
         <div
           className="image-viewer-transform"
           style={{
-            width: `${zoom * 100}%`,
+            width: displayedWidth,
+            height: displayedHeight,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+            transformOrigin: '0 0',
+            position: 'relative',
+            margin: 'auto',
           }}
         >
           <img
@@ -194,11 +270,11 @@ export function ImageViewer({
             alt="OCR対象画像"
             className="viewer-image"
             draggable={false}
+            style={{ width: '100%', height: '100%', display: 'block' }}
           />
 
-          {/* テキスト領域オーバーレイ */}
+          {/* Text block overlays */}
           <div className="viewer-overlay" style={{ width: imgSize.width, height: imgSize.height }}>
-            {/* PageBlock オーバーレイ */}
             {pageBlocks?.map((block, i) => (
               <div
                 key={`pb-${i}`}
@@ -229,7 +305,7 @@ export function ImageViewer({
               />
             ))}
 
-            {/* マウスドラッグ中の選択範囲 */}
+            {/* Mouse drag selection */}
             {selectionRect && (
               <div
                 className="drag-selection"
@@ -242,7 +318,7 @@ export function ImageViewer({
               />
             )}
 
-            {/* 確定済み選択領域のハイライト */}
+            {/* Confirmed region highlight */}
             {selectedRegion && !selectionRect && (
               <div
                 className="region-selected-highlight"
@@ -258,13 +334,13 @@ export function ImageViewer({
         </div>
       </div>
 
-      {/* ページ番号と画像サイズ */}
+      {/* Page info + image size */}
       <div className="image-viewer-info">
         {totalPages != null && totalPages > 0 && (
           <span>page {(pageIndex ?? 0) + 1}/{totalPages}</span>
         )}
         {naturalSize.width > 0 && (
-          <span>{naturalSize.width}x{naturalSize.height}px</span>
+          <span>{naturalSize.width}×{naturalSize.height}px</span>
         )}
       </div>
     </div>
