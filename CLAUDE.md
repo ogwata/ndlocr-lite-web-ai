@@ -256,6 +256,10 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
+### NDLMoji.yaml の読み込みキャッシュ
+
+`/config/NDLMoji.yaml`（文字認識用の文字セット定義）は `src/worker/text-recognizer.ts` のモジュールレベルでキャッシュしている。同一Worker内では初回のみfetchし、複数の `TextRecognizer` インスタンス間で共有する。これはインスタンスごとにfetchしていた際に毎秒10回以上のポーリングが発生し、Netlifyの帯域を圧迫した問題への対処である。新たに `TextRecognizer` を利用するコードを追加する場合も、この仕組みを維持すること。
+
 ### コーディング規約
 
 - 言語: TypeScript（strict mode）
