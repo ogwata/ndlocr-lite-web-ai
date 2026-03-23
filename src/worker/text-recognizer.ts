@@ -19,11 +19,36 @@ interface RecognitionResult {
   confidence: number
 }
 
+/** Module-level cache: fetch NDLMoji.yaml only once per worker */
+let cachedYamlConfig: Record<string, unknown> | null = null
+let configLoadPromise: Promise<Record<string, unknown> | null> | null = null
+
+async function loadSharedConfig(): Promise<Record<string, unknown> | null> {
+  if (cachedYamlConfig) return cachedYamlConfig
+  if (configLoadPromise) return configLoadPromise
+
+  configLoadPromise = (async () => {
+    try {
+      const response = await fetch('/config/NDLmoji.yaml')
+      if (!response.ok) throw new Error(`Failed to load config: ${response.statusText}`)
+      const yamlText = await response.text()
+      cachedYamlConfig = yaml.load(yamlText) as Record<string, unknown>
+      console.log('NDLMoji.yaml loaded and cached')
+      return cachedYamlConfig
+    } catch (error) {
+      console.warn(`Failed to load config: ${(error as Error).message}`)
+      configLoadPromise = null // allow retry on failure
+      return null
+    }
+  })()
+
+  return configLoadPromise
+}
+
 export class TextRecognizer {
   private session: OrtType.InferenceSession | null = null
   private initialized = false
   private config: RecognizerConfig
-  private configPath = '/config/NDLmoji.yaml'
 
   constructor(inputShape?: [number, number, number, number]) {
     this.config = {
@@ -48,26 +73,19 @@ export class TextRecognizer {
   }
 
   private async loadConfig(): Promise<void> {
-    try {
-      const response = await fetch(this.configPath)
-      if (!response.ok) throw new Error(`Failed to load config: ${response.statusText}`)
+    const yamlConfig = await loadSharedConfig()
+    if (!yamlConfig) return
 
-      const yamlText = await response.text()
-      const yamlConfig = yaml.load(yamlText) as Record<string, unknown>
+    if (yamlConfig?.text_recognition) {
+      const textConfig = yamlConfig.text_recognition as Record<string, unknown>
+      if (textConfig.input_shape) this.config.inputShape = textConfig.input_shape as [number, number, number, number]
+      if (textConfig.max_length) this.config.maxLength = textConfig.max_length as number
+    }
 
-      if (yamlConfig?.text_recognition) {
-        const textConfig = yamlConfig.text_recognition as Record<string, unknown>
-        if (textConfig.input_shape) this.config.inputShape = textConfig.input_shape as [number, number, number, number]
-        if (textConfig.max_length) this.config.maxLength = textConfig.max_length as number
-      }
-
-      if ((yamlConfig?.model as Record<string, unknown>)?.charset_train) {
-        const charsetTrain = (yamlConfig.model as Record<string, unknown>).charset_train as string
-        this.config.charList = charsetTrain.split('')
-        console.log(`Character list loaded: ${this.config.charList.length} characters`)
-      }
-    } catch (error) {
-      console.warn(`Failed to load config, using defaults: ${(error as Error).message}`)
+    if ((yamlConfig?.model as Record<string, unknown>)?.charset_train) {
+      const charsetTrain = (yamlConfig.model as Record<string, unknown>).charset_train as string
+      this.config.charList = charsetTrain.split('')
+      console.log(`Character list loaded: ${this.config.charList.length} characters`)
     }
   }
 
