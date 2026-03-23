@@ -93,9 +93,13 @@ export function TextEditor({
   // Scroll sync for line numbers
   const handleTextareaScroll = useCallback(() => {
     if (gutterRef.current && textareaRef.current) {
-      gutterRef.current.scrollTop = textareaRef.current.scrollTop
+      if (isVertical) {
+        gutterRef.current.scrollLeft = textareaRef.current.scrollLeft
+      } else {
+        gutterRef.current.scrollTop = textareaRef.current.scrollTop
+      }
     }
-  }, [])
+  }, [isVertical])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -449,8 +453,17 @@ export function TextEditor({
           />
         ) : (
           <div className={`line-numbers-container ${isVertical ? 'text-editor-vertical' : ''}`}>
-            {showLineNumbers && (
+            {showLineNumbers && !isVertical && (
               <div className="line-numbers-gutter" ref={gutterRef}>
+                {Array.from({ length: lineCount }).map((_, i) => (
+                  <span key={i} className="line-number">
+                    {i + 1}
+                  </span>
+                ))}
+              </div>
+            )}
+            {showLineNumbers && isVertical && (
+              <div className="line-numbers-gutter-vertical" ref={gutterRef}>
                 {Array.from({ length: lineCount }).map((_, i) => (
                   <span key={i} className="line-number">
                     {i + 1}

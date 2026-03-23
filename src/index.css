@@ -1607,6 +1607,13 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   text-align: center;
   font-variant-numeric: tabular-nums;
   user-select: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.zoom-level:hover {
+  color: var(--color-primary);
 }
 
 .zoom-controls-sep {
@@ -1779,9 +1786,35 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   white-space: nowrap;
 }
 
+.text-editor-vertical {
+  flex-direction: column;
+}
+
 .text-editor-vertical .text-editor-textarea {
   writing-mode: vertical-rl;
   text-orientation: mixed;
+}
+
+.line-numbers-gutter-vertical {
+  display: flex;
+  flex-direction: row-reverse;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 0.35rem 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  user-select: none;
+  font-family: 'Noto Sans Mono', 'Courier New', monospace;
+  font-size: 11px;
+  gap: 0.1rem;
+}
+
+.line-numbers-gutter-vertical .line-number {
+  display: inline-block;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  min-width: 1.5rem;
+  white-space: nowrap;
 }
 
 /* ===== SEARCH & REPLACE BAR ===== */

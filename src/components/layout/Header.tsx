@@ -51,7 +51,7 @@ export function Header({
     <header className="header">
       <button className="header-title" onClick={onLogoClick}>
         <h1>NDLOCR-Lite Web AI</h1>
-        <span className="header-version">v0.3.6</span>
+        <span className="header-version">v0.4.0</span>
       </button>
       <div className="header-actions">
         <span className={statusClass} title={statusText}>
