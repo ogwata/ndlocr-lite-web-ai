@@ -540,10 +540,9 @@ function applySharpness(imageData: ImageData, amount: number): void {
   const data = imageData.data
   const width = imageData.width
   const height = imageData.height
-  // Unsharp mask approach: blend original with sharpened
-  // Standard sharpen kernel: [0, -1, 0, -1, 5, -1, 0, -1, 0] (sum=1)
-  // amount 0-100 controls blend ratio (0 = original, 100 = full sharpen)
-  const strength = amount / 100
+  // Unsharp mask: output = original + strength * (original - blurred_neighbor_average)
+  // strength 0-3: slider 0→0, 50→1.5, 100→3.0 で効果を明確に
+  const strength = (amount / 100) * 3
 
   const tempData = new Uint8ClampedArray(data)
 
@@ -551,17 +550,16 @@ function applySharpness(imageData: ImageData, amount: number): void {
     for (let x = 1; x < width - 1; x++) {
       for (let c = 0; c < 3; c++) {
         const idx = (y * width + x) * 4 + c
-        const original = tempData[idx]
-        // Apply standard sharpen kernel (sum = 1, preserves brightness)
-        let sharpened =
-          -tempData[((y - 1) * width + x) * 4 + c]
-          - tempData[(y * width + (x - 1)) * 4 + c]
-          + 5 * tempData[idx]
-          - tempData[(y * width + (x + 1)) * 4 + c]
-          - tempData[((y + 1) * width + x) * 4 + c]
-        sharpened = Math.max(0, Math.min(255, sharpened))
-        // Blend original and sharpened by strength
-        data[idx] = Math.round(original * (1 - strength) + sharpened * strength)
+        const center = tempData[idx]
+        // 4-neighbor average (blur)
+        const blur = (
+          tempData[((y - 1) * width + x) * 4 + c] +
+          tempData[(y * width + (x - 1)) * 4 + c] +
+          tempData[(y * width + (x + 1)) * 4 + c] +
+          tempData[((y + 1) * width + x) * 4 + c]
+        ) / 4
+        // Unsharp mask: enhance the difference between center and blur
+        data[idx] = Math.max(0, Math.min(255, Math.round(center + strength * (center - blur))))
       }
     }
   }
