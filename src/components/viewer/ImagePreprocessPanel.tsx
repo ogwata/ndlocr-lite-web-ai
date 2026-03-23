@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import type { Language } from '../../i18n'
 
 export interface PreprocessOptions {
   brightness: number
@@ -25,14 +26,35 @@ export const DEFAULT_PREPROCESS_OPTIONS: PreprocessOptions = {
 }
 
 interface ImagePreprocessPanelProps {
-  lang: 'ja' | 'en'
+  lang: Language
   imageDataUrl: string
   onProcessed: (dataUrl: string) => void
   onSplitPages?: (pages: string[]) => void
   onReset: () => void
 }
 
-const t = {
+type TranslationStrings = {
+  imagePreprocessing: string
+  brightness: string
+  contrast: string
+  sharpness: string
+  grayscale: string
+  blackWhite: string
+  binarizeThreshold: string
+  denoise: string
+  invertColors: string
+  deskewAuto: string
+  autoCrop: string
+  splitCenter: string
+  splitAuto: string
+  rotation: string
+  apply: string
+  reset: string
+  degrees: string
+  processing: string
+}
+
+const t: Record<Language, TranslationStrings> = {
   ja: {
     imagePreprocessing: '画像前処理',
     brightness: '明度',
@@ -72,6 +94,66 @@ const t = {
     reset: 'Reset',
     degrees: '°',
     processing: 'Processing...',
+  },
+  'zh-CN': {
+    imagePreprocessing: '图像预处理',
+    brightness: '亮度',
+    contrast: '对比度',
+    sharpness: '锐度',
+    grayscale: '灰度',
+    blackWhite: '黑白二值化',
+    binarizeThreshold: '二值化阈值',
+    denoise: '降噪',
+    invertColors: '反转颜色',
+    deskewAuto: '自动去斜',
+    autoCrop: '自动裁剪',
+    splitCenter: '中心分割',
+    splitAuto: '自动分割',
+    rotation: '旋转',
+    apply: '应用',
+    reset: '重置',
+    degrees: '°',
+    processing: '处理中...',
+  },
+  'zh-TW': {
+    imagePreprocessing: '圖像預處理',
+    brightness: '亮度',
+    contrast: '對比度',
+    sharpness: '銳度',
+    grayscale: '灰度',
+    blackWhite: '黑白二值化',
+    binarizeThreshold: '二值化閾值',
+    denoise: '降噪',
+    invertColors: '反轉顏色',
+    deskewAuto: '自動去斜',
+    autoCrop: '自動裁剪',
+    splitCenter: '中心分割',
+    splitAuto: '自動分割',
+    rotation: '旋轉',
+    apply: '應用',
+    reset: '重置',
+    degrees: '°',
+    processing: '處理中...',
+  },
+  ko: {
+    imagePreprocessing: '이미지 전처리',
+    brightness: '밝기',
+    contrast: '명암비',
+    sharpness: '선명도',
+    grayscale: '그레이스케일',
+    blackWhite: '검정색 및 흰색',
+    binarizeThreshold: '이진화 임계값',
+    denoise: '노이즈 제거',
+    invertColors: '색 반전',
+    deskewAuto: '자동 기울기 보정',
+    autoCrop: '자동 자르기',
+    splitCenter: '중심 분할',
+    splitAuto: '자동 분할',
+    rotation: '회전',
+    apply: '적용',
+    reset: '재설정',
+    degrees: '°',
+    processing: '처리 중...',
   },
 }
 

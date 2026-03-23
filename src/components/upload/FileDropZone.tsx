@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
+import type { Language } from '../../i18n'
 
 interface FileDropZoneProps {
   onFilesSelected: (files: File[]) => void
-  lang: 'ja' | 'en'
+  lang: Language
   disabled?: boolean
 }
 

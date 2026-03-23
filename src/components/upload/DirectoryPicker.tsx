@@ -1,8 +1,9 @@
 import { useRef } from 'react'
+import type { Language } from '../../i18n'
 
 interface DirectoryPickerProps {
   onFilesSelected: (files: File[]) => void
-  lang: 'ja' | 'en'
+  lang: Language
   disabled?: boolean
 }
 

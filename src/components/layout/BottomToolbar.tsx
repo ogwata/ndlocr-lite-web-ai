@@ -1,5 +1,7 @@
+import type { Language } from '../../i18n'
+
 interface BottomToolbarProps {
-  lang: 'ja' | 'en'
+  lang: Language
   onUpload: () => void
   ocrTimeMs?: number
   aiTimeMs?: number

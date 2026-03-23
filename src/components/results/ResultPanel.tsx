@@ -1,10 +1,11 @@
 import type { OCRResult, TextBlock } from '../../types/ocr'
+import type { Language } from '../../i18n'
 
 interface ResultPanelProps {
   result: OCRResult | null
   selectedBlock: TextBlock | null
   selectedPageBlockText?: string | null
-  lang: 'ja' | 'en'
+  lang: Language
 }
 
 export function ResultPanel({ result, selectedBlock, selectedPageBlockText, lang }: ResultPanelProps) {

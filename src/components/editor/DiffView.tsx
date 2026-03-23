@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import DiffMatchPatch from 'diff-match-patch'
+import type { Language } from '../../i18n'
 
 export type DiffSegment = {
   type: 'equal' | 'insert' | 'delete'
@@ -12,7 +13,7 @@ interface DiffViewProps {
   onAcceptAll: () => void
   onRejectAll: () => void
   onApplySelective: (text: string) => void
-  lang: 'ja' | 'en'
+  lang: Language
 }
 
 export function computeDiff(original: string, corrected: string): DiffSegment[] {

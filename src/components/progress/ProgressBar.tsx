@@ -1,11 +1,12 @@
 import type { OCRJobState } from '../../types/ocr'
+import type { Language } from '../../i18n'
 
 interface ProgressBarProps {
   jobState: OCRJobState
-  lang: 'ja' | 'en'
+  lang: Language
 }
 
-const MODEL_LABELS = {
+const MODEL_LABELS: Record<Language, { layout: string; rec30: string; rec50: string; rec100: string; downloading: string }> = {
   ja: {
     layout: 'レイアウト検出モデル',
     rec30: '文字認識モデル（≤30文字）',
@@ -19,6 +20,27 @@ const MODEL_LABELS = {
     rec50: 'Recognition model (≤50 chars)',
     rec100: 'Recognition model (≤100 chars)',
     downloading: 'Downloading models',
+  },
+  'zh-CN': {
+    layout: '布局检测模型',
+    rec30: '识别模型（≤30字符）',
+    rec50: '识别模型（≤50字符）',
+    rec100: '识别模型（≤100字符）',
+    downloading: '正在下载模型',
+  },
+  'zh-TW': {
+    layout: '佈局偵測模型',
+    rec30: '識別模型（≤30字符）',
+    rec50: '識別模型（≤50字符）',
+    rec100: '識別模型（≤100字符）',
+    downloading: '正在下載模型',
+  },
+  ko: {
+    layout: '레이아웃 감지 모델',
+    rec30: '인식 모델 (≤30문자)',
+    rec50: '인식 모델 (≤50문자)',
+    rec100: '인식 모델 (≤100문자)',
+    downloading: '모델 다운로드 중',
   },
 }
 

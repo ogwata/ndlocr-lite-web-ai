@@ -3,10 +3,11 @@ import { clearModels } from '../../utils/db'
 import type { AISettings, AIProvider, AIConnectionMode } from '../../types/ai'
 import { DEFAULT_MODELS, DEFAULT_AI_SETTINGS } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
+import type { Language } from '../../i18n'
 
 interface SettingsModalProps {
   onClose: () => void
-  lang: 'ja' | 'en'
+  lang: Language
   aiSettings: AISettings
   onUpdateAISettings: (update: Partial<AISettings>) => void
   onSwitchProvider: (provider: AIProvider) => Promise<void>

@@ -4,12 +4,13 @@ import type { AIConnector } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
 import { DiffView } from './DiffView'
+import type { Language } from '../../i18n'
 
 interface TextEditorProps {
   result: OCRResult | null
   selectedBlock: TextBlock | null
   selectedPageBlockText: string | null
-  lang: 'ja' | 'en'
+  lang: Language
   onTextChange?: (text: string) => void
   aiConnector: AIConnector | null
   aiConnectionStatus?: AIConnectionStatus
