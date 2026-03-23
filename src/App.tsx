@@ -416,11 +416,6 @@ export default function App() {
                       ? (lang === 'ja' ? '選択領域のOCRを開始' : 'OCR Selected Region')
                       : (lang === 'ja' ? 'OCRを開始' : 'Start OCR')}
                   </button>
-                  {selectedRegion && (
-                    <button className="btn btn-secondary" onClick={handleClearRegion}>
-                      {lang === 'ja' ? '選択解除' : 'Clear Selection'}
-                    </button>
-                  )}
                 </div>
                 <ImagePreprocessPanel
                   lang={lang}
@@ -436,6 +431,13 @@ export default function App() {
                   onRegionSelect={handleRegionSelect}
                   selectedRegion={selectedRegion}
                 />
+                {selectedRegion && (
+                  <div className="region-action-bar">
+                    <button className="btn btn-secondary btn-sm" onClick={handleClearRegion}>
+                      {lang === 'ja' ? '選択解除' : 'Clear Selection'}
+                    </button>
+                  </div>
+                )}
                 <p className="region-select-hint">
                   {lang === 'ja'
                     ? 'マウスで領域をドラッグして選択し、「OCRを開始」で認識できます'

@@ -18,6 +18,7 @@ export function FileDropZone({ onFilesSelected, lang, disabled = false }: FileDr
       const ext = f.name.toLowerCase().split('.').pop()
       return ['tif', 'tiff', 'heic', 'heif'].includes(ext ?? '')
     })
+    accepted.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
     if (accepted.length > 0) onFilesSelected(accepted)
   }
 
