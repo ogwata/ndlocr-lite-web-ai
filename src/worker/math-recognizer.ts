@@ -186,6 +186,32 @@ export class MathRecognizer {
   }
 
   /**
+   * ByteLevel BPE のバイト→Unicode変換テーブルを構築
+   * GPT-2/RoBERTa系トークナイザーで使用される標準マッピング
+   */
+  private static buildBytesToUnicode(): Map<string, number> {
+    // Unicode codepoint → byte value のマッピング
+    const mapping = new Map<string, number>()
+
+    // 印刷可能ASCII文字はそのまま (! " # ... ~)
+    for (let b = 33; b <= 126; b++) mapping.set(String.fromCharCode(b), b)
+    // Latin-1 supplement の一部 (¡ ... ¬, ® ... ÿ)
+    for (let b = 161; b <= 172; b++) mapping.set(String.fromCharCode(b), b)
+    for (let b = 174; b <= 255; b++) mapping.set(String.fromCharCode(b), b)
+
+    // 残りのバイト値 (0-32, 127-160, 173) はU+0100以降にマッピング
+    let n = 256
+    for (let b = 0; b < 256; b++) {
+      if (!Array.from(mapping.values()).includes(b)) {
+        mapping.set(String.fromCharCode(n), b)
+        n++
+      }
+    }
+
+    return mapping
+  }
+
+  /**
    * トークンIDをLaTeX文字列にデコード
    */
   private decodeTokens(tokenIds: number[]): string {
@@ -204,10 +230,20 @@ export class MathRecognizer {
       if (token) tokens.push(token)
     }
 
-    // BPEのsentencepiece方式: ▁ (U+2581) をスペースに変換
-    return tokens.join('')
-      .replace(/▁/g, ' ')
-      .trim()
+    // ByteLevel BPE デコード: トークン文字列の各Unicode文字をバイトに変換し、UTF-8としてデコード
+    const joined = tokens.join('')
+    const bytesToUnicode = MathRecognizer.buildBytesToUnicode()
+    const bytes: number[] = []
+    for (const char of joined) {
+      const byteVal = bytesToUnicode.get(char)
+      if (byteVal !== undefined) {
+        bytes.push(byteVal)
+      }
+    }
+
+    // バイト配列をUTF-8文字列にデコード
+    const decoded = new TextDecoder('utf-8').decode(new Uint8Array(bytes))
+    return decoded.trim()
   }
 
   dispose(): void {
