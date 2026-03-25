@@ -95,3 +95,66 @@ export function downloadHOCR(result: OCRResult): void {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * 複数のOCR結果をまとめた単一のhOCRファイルとしてダウンロード
+ */
+export function downloadBatchHOCR(results: OCRResult[], batchName?: string): void {
+  const now = new Date().toISOString()
+  let lineIdCounter = 1
+
+  const pages = results.map((result, pageIdx) => {
+    const sortedBlocks = [...result.textBlocks].sort((a, b) => a.readingOrder - b.readingOrder)
+    const fileName = escapeHtml(result.fileName)
+
+    let pageX0 = Infinity, pageY0 = Infinity, pageX1 = 0, pageY1 = 0
+    for (const block of sortedBlocks) {
+      pageX0 = Math.min(pageX0, block.x)
+      pageY0 = Math.min(pageY0, block.y)
+      pageX1 = Math.max(pageX1, block.x + block.width)
+      pageY1 = Math.max(pageY1, block.y + block.height)
+    }
+    if (sortedBlocks.length === 0) {
+      pageX0 = pageY0 = 0
+      pageX1 = pageY1 = 0
+    }
+
+    const pageBbox = `bbox ${Math.round(pageX0)} ${Math.round(pageY0)} ${Math.round(pageX1)} ${Math.round(pageY1)}`
+
+    const lines = sortedBlocks.map(block => {
+      const bb = bboxStr(block.x, block.y, block.width, block.height)
+      const conf = block.confidence !== undefined ? `; x_wconf ${Math.round(block.confidence * 100)}` : ''
+      const text = escapeHtml(block.text)
+      const id = lineIdCounter++
+      return `      <span class="ocr_line" id="line_${id}" title="${bb}${conf}">${text}</span>`
+    }).join('\n')
+
+    return `  <div class="ocr_page" id="page_${pageIdx + 1}" title="image &quot;${fileName}&quot;; ${pageBbox}">
+${lines}
+  </div>`
+  }).join('\n')
+
+  const html = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+  <title>hOCR batch output</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="ocr-system" content="NDLOCR-Lite Web AI"/>
+  <meta name="ocr-capabilities" content="ocr_page ocr_line"/>
+  <meta name="dc.date" content="${now}"/>
+</head>
+<body>
+${pages}
+</body>
+</html>
+`
+  const name = batchName ?? 'batch'
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${name}_ocr.hocr`
+  a.click()
+  URL.revokeObjectURL(url)
+}
