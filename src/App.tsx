@@ -19,7 +19,7 @@ import { TextEditor } from './components/editor/TextEditor'
 const ImagePreprocessPanel = lazy(() => import('./components/viewer/ImagePreprocessPanel').then(m => ({ default: m.ImagePreprocessPanel })))
 const HistoryPanel = lazy(() => import('./components/results/HistoryPanel').then(m => ({ default: m.HistoryPanel })))
 const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
-import { loadModelConfig } from './types/model-config'
+import { loadModelConfig, LANGUAGE_LABELS as MODEL_LANG_LABELS } from './types/model-config'
 import type { ModelConfig } from './types/model-config'
 import { imageDataToDataUrl } from './utils/imageLoader'
 import './App.css'
@@ -466,6 +466,18 @@ export default function App() {
               <button className="btn btn-secondary" onClick={handleSampleLoad} disabled={isWorking}>
                 {lang === 'ja' ? 'サンプルを試す' : 'Try Sample'}
               </button>
+            </div>
+            <div className="upload-model-info">
+              <span>
+                {lang === 'ja' ? 'OCRモデル: ' : 'OCR model: '}
+                {MODEL_LANG_LABELS[lang]?.[modelConfig.language] ?? MODEL_LANG_LABELS.en[modelConfig.language]}
+              </span>
+              {modelConfig.mathEnabled && (
+                <span>{lang === 'ja' ? ' + 数式' : ' + Math'}</span>
+              )}
+              <span className="upload-model-info-hint">
+                {lang === 'ja' ? '（設定で変更可能）' : '(changeable in Settings)'}
+              </span>
             </div>
           </section>
         )}
