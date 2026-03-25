@@ -46,6 +46,9 @@ export function ImageViewer({
   const [isPanning, setIsPanning] = useState(false)
   const [spaceHeld, setSpaceHeld] = useState(false)
   const [smooth, setSmooth] = useState(false)
+  const [showTextOverlay, setShowTextOverlay] = useState(false)
+  const [showConfidence, setShowConfidence] = useState(false)
+  const [showReadingOrder, setShowReadingOrder] = useState(false)
 
   const panStartRef = useRef({ x: 0, y: 0 })
   const panOffsetRef = useRef({ x: 0, y: 0 })
@@ -328,6 +331,38 @@ export function ImageViewer({
             </svg>
           </button>
         )}
+        {textBlocks.length > 0 && (
+          <>
+            <span className="zoom-controls-sep" />
+            <button
+              className={`btn-zoom ${showTextOverlay ? 'btn-zoom-active' : ''}`}
+              onClick={() => setShowTextOverlay(v => !v)}
+              title="Text overlay"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+              </svg>
+            </button>
+            <button
+              className={`btn-zoom ${showConfidence ? 'btn-zoom-active' : ''}`}
+              onClick={() => setShowConfidence(v => !v)}
+              title="Confidence heatmap"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 15h18" /><path d="M3 9h18" />
+              </svg>
+            </button>
+            <button
+              className={`btn-zoom ${showReadingOrder ? 'btn-zoom-active' : ''}`}
+              onClick={() => setShowReadingOrder(v => !v)}
+              title="Reading order"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14" /><path d="M18 13l-6 6-6-6" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Image container */}
@@ -364,18 +399,37 @@ export function ImageViewer({
                 title={`Block ${i + 1}`}
               />
             ))}
-            {textBlocks.map((block, i) => (
-              <div
-                key={i}
-                className={`region-box ${selectedBlock === block ? 'selected' : ''}`}
-                style={{
-                  left: block.x * scaleX, top: block.y * scaleY,
-                  width: block.width * scaleX, height: block.height * scaleY,
-                }}
-                onClick={() => onBlockSelect(block)}
-                title={block.text}
-              />
-            ))}
+            {textBlocks.map((block, i) => {
+              const conf = block.confidence ?? 0.5
+              const confidenceStyle = showConfidence ? {
+                backgroundColor: `hsla(${Math.round(conf * 120)}, 85%, 50%, 0.5)`,
+                border: `2px solid hsla(${Math.round(conf * 120)}, 85%, 45%, 0.8)`,
+              } : undefined
+              const titleText = block.text + (showConfidence ? ` (${Math.round(conf * 100)}%)` : '')
+              const isVertical = block.height > block.width * 1.3
+              return (
+                <div
+                  key={i}
+                  className={`region-box ${selectedBlock === block ? 'selected' : ''} ${showTextOverlay ? 'region-box-text-overlay' : ''}`}
+                  style={{
+                    left: block.x * scaleX, top: block.y * scaleY,
+                    width: block.width * scaleX, height: block.height * scaleY,
+                    ...confidenceStyle,
+                  }}
+                  onClick={() => onBlockSelect(block)}
+                  title={titleText}
+                >
+                  {showTextOverlay && (
+                    <span className="region-text-label" style={{ writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb' }}>
+                      {block.text}
+                    </span>
+                  )}
+                  {showReadingOrder && (
+                    <span className="region-reading-order">{block.readingOrder}</span>
+                  )}
+                </div>
+              )
+            })}
             {selectionRect && (
               <div className="drag-selection" style={{
                 left: selectionRect.left, top: selectionRect.top,
