@@ -113,6 +113,11 @@ Cross-Origin-Embedder-Policy: require-corp
 - 処理履歴ボタン、設定ボタン
 - 言語切替プルダウン（日本語 / English）
 
+#### OCR開始前（Pending画面）
+
+- 文書言語セレクタ（OCR開始ボタンの左横）: 日本語 / English / Deutsch / Français / Español / Português / Italiano / Nederlands / Čeština / Polski / Dansk / Norsk / Suomi の13言語。文書言語に応じてOCRモデル（日本語: NDL PARSeq×3カスケード / 欧米諸語: OnnxTR PARSeq multilingual単一モデル）を自動選択。モデル切替はOCR実行時にWorkerを遅延再初期化（リロード不要）。
+- 数式認識が有効な場合、領域選択後に「数式として認識」ボタンを表示。pix2text-mfr（DeiT encoder + TrOCR decoder）でLaTeX出力、MathJaxでプレビュー表示。
+
 #### メインコンテンツ（左右分割）
 
 - **左パネル（ImageViewer）：** 元画像の表示。Fit-to-view自動フィット、+/−ボタンとCtrl+ホイールでカーソル中心ズーム、パン/選択モード切替。OCRで検出されたテキスト行の矩形をオーバーレイ表示。表示モード切替（テキストオーバーレイ、信頼度ヒートマップ、読み順番号）。マウスドラッグで領域選択 → オレンジ枠でハイライト → 「選択領域のOCRを開始」ボタンで部分OCR。画像下部にページ番号（page N/M）と画像サイズ表示。画像前処理パネル（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割、全画像への一括適用対応）。

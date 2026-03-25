@@ -209,7 +209,17 @@ deluxeリポジトリからの機能取り込み:
 
 - fix: 数式認識のBPEトークナイザーデコードを修正（ByteLevel BPEのUnicode→バイト変換テーブルを正しく実装）
 - fix: 数式モデル読み込みエラーを修正（言語別URL辞書へのフォールバック）
-- fix: 文書言語切替時のリロードを廃止、OCR実行時の遅延初期化に変更
+
+### v0.6.0（2026-03-26）
+
+- feat: 文書言語セレクタ（OCR開始ボタン横、13言語から選択）
+- feat: 文書言語に応じてOCRモデル（日本語/欧米諸語）を自動選択
+- feat: AI校正プロンプトに文書言語名を自動埋め込み
+- feat: 文書言語切替時のリロードを廃止、OCR実行時にWorkerを遅延再初期化
+- feat: 数式認識機能（pix2text-mfr encoder/decoder、LaTeX出力、MathJaxプレビュー）
+- feat: 欧米諸語OCR対応（OnnxTR PARSeq multilingual、12言語）
+- feat: 設定画面にOCRモデルタブ追加（数式認識の有効/無効）
+- refactor: UI言語を日英2言語に整理（OCR非対応の中国語・韓国語UIを削除）
 
 ### v0.4.3（2026-03-23）
 

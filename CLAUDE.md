@@ -6,8 +6,8 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 
 - ブラウザ内でONNX Runtime Web（WASM）によるOCR推論を実行
 - サーバーに画像を送信しない完全クライアントサイド処理
-- 日本語 / 欧米諸語（英独仏西葡伊蘭捷波丹諾芬の12言語）の認識言語切替
-- AI（Claude, GPT, Gemini等）によるOCR結果の校正機能を付加
+- 文書言語セレクタ（13言語）でOCRモデルとAI校正プロンプトを自動連動
+- AI（Claude, GPT, Gemini等）によるOCR結果の校正機能（文書言語に応じたプロンプト自動生成）
 - 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割・一括適用）
 - ダークモード（OS設定追従）、多言語UI（日英）、縦書き表示モード
 - 数式認識（pix2text-mfr: DeiT encoder + TrOCR decoder、LaTeX出力、MathJax表示）
@@ -152,6 +152,11 @@ ndlocr-lite-web-ai/
 **ヘッダーバー:**
 - 左: アプリアイコン + アプリ名 + バージョンバッジ
 - 右: ダークモード切替 + 言語選択（日英） + AI接続ステータスバッジ（connected=緑 / disconnected=灰）+ Settingsボタン
+
+**OCR開始前（Pending画面）:**
+- 文書言語セレクタ（OCR開始ボタンの左横）: 日本語（デフォルト）/ English / Deutsch / Français / Español / Português / Italiano / Nederlands / Čeština / Polski / Dansk / Norsk / Suomi
+- 文書言語に応じてOCRモデル（ja/european）を自動選択。モデル切替はOCR実行時にWorkerを遅延再初期化
+- 数式認識有効時、領域選択後に「数式として認識」ボタンを表示
 
 **左パネル（ImageViewer）:**
 - 元画像の表示（Fit-to-viewで自動フィット、+/−ボタンとCtrl+ホイールでカーソル中心ズーム）
