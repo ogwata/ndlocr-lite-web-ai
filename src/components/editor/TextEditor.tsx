@@ -56,6 +56,13 @@ export function TextEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
 
+  // Undo/Redo stacks
+  interface UndoRedoEntry { text: string; cursorPos?: number }
+  const [undoStack, setUndoStack] = useState<UndoRedoEntry[]>([])
+  const [redoStack, setRedoStack] = useState<UndoRedoEntry[]>([])
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingUndoRef = useRef<string | null>(null)
+
   // editedText が null なら result.fullText を使う
   const displayText = editedText ?? result?.fullText ?? ''
 
@@ -81,14 +88,62 @@ export function TextEditor({
     return displayText.split('\n').length
   }, [displayText])
 
+  const flushUndo = useCallback(() => {
+    if (pendingUndoRef.current !== null) {
+      const text = pendingUndoRef.current
+      setUndoStack(prev => [...prev, { text, cursorPos: textareaRef.current?.selectionStart }])
+      pendingUndoRef.current = null
+    }
+  }, [])
+
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newText = e.target.value
+      // Record undo snapshot (debounced: first keystroke of a burst captures current text)
+      if (pendingUndoRef.current === null) {
+        pendingUndoRef.current = displayText
+      }
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      undoTimerRef.current = setTimeout(flushUndo, 500)
+      setRedoStack([])
       setEditedText(newText)
       onTextChange?.(newText)
     },
-    [onTextChange],
+    [onTextChange, displayText, flushUndo],
   )
+
+  const handleUndo = useCallback(() => {
+    flushUndo()
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev
+      const entry = prev[prev.length - 1]
+      setRedoStack(r => [...r, { text: displayText, cursorPos: textareaRef.current?.selectionStart }])
+      setEditedText(entry.text)
+      onTextChange?.(entry.text)
+      if (entry.cursorPos !== undefined) {
+        setTimeout(() => {
+          textareaRef.current?.setSelectionRange(entry.cursorPos!, entry.cursorPos!)
+        })
+      }
+      return prev.slice(0, -1)
+    })
+  }, [flushUndo, displayText, onTextChange])
+
+  const handleRedo = useCallback(() => {
+    setRedoStack(prev => {
+      if (prev.length === 0) return prev
+      const entry = prev[prev.length - 1]
+      setUndoStack(u => [...u, { text: displayText, cursorPos: textareaRef.current?.selectionStart }])
+      setEditedText(entry.text)
+      onTextChange?.(entry.text)
+      if (entry.cursorPos !== undefined) {
+        setTimeout(() => {
+          textareaRef.current?.setSelectionRange(entry.cursorPos!, entry.cursorPos!)
+        })
+      }
+      return prev.slice(0, -1)
+    })
+  }, [displayText, onTextChange])
 
   // Scroll sync for line numbers
   const handleTextareaScroll = useCallback(() => {
@@ -104,16 +159,26 @@ export function TextEditor({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'f') {
+      const isMeta = e.metaKey || e.ctrlKey
+      if (isMeta && e.key === 'f') {
         e.preventDefault()
         setShowSearchBar(!showSearchBar)
       } else if (e.key === 'Escape' && showSearchBar) {
         setShowSearchBar(false)
+      } else if (isMeta && e.shiftKey && e.key === 'z') {
+        e.preventDefault()
+        handleRedo()
+      } else if (isMeta && e.key === 'z') {
+        // Only handle undo if textarea is focused
+        if (document.activeElement === textareaRef.current) {
+          e.preventDefault()
+          handleUndo()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showSearchBar])
+  }, [showSearchBar, handleUndo, handleRedo])
 
   // result が変わったら編集状態・校正状態をリセット
   const [prevResultId, setPrevResultId] = useState<string | null>(null)
@@ -121,6 +186,8 @@ export function TextEditor({
     setPrevResultId(result.id)
     setEditedText(null)
     setProofreadState({ status: 'idle' })
+    setUndoStack([])
+    setRedoStack([])
   }
 
   const applyOptions = (text: string) =>
@@ -245,6 +312,28 @@ export function TextEditor({
           </span>
         </div>
         <div className="text-editor-header-buttons">
+          <button
+            className="btn btn-icon btn-sm"
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            title={lang === 'ja' ? '元に戻す (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
+            aria-label="Undo"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7v6h6" /><path d="M3 13a9 9 0 0 1 3-7.7A9 9 0 0 1 21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.7-3" />
+            </svg>
+          </button>
+          <button
+            className="btn btn-icon btn-sm"
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            title={lang === 'ja' ? 'やり直す (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
+            aria-label="Redo"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 7v6h-6" /><path d="M21 13a9 9 0 0 0-3-7.7A9 9 0 0 0 3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.7-3" />
+            </svg>
+          </button>
           <button
             className="btn btn-icon btn-sm"
             onClick={() => setShowSearchBar(!showSearchBar)}
