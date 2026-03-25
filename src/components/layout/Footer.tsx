@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Language } from '../../i18n'
 
 interface FooterProps {
@@ -5,7 +6,7 @@ interface FooterProps {
   githubUrl?: string
 }
 
-export function Footer({ lang, githubUrl = 'https://github.com/ogwata/ndlocr-lite-web-ai' }: FooterProps) {
+export const Footer = memo(function Footer({ lang, githubUrl = 'https://github.com/ogwata/ndlocr-lite-web-ai' }: FooterProps) {
   return (
     <footer className="footer">
       <div className="footer-privacy">
@@ -94,4 +95,4 @@ export function Footer({ lang, githubUrl = 'https://github.com/ogwata/ndlocr-lit
       </div>
     </footer>
   )
-}
+})

@@ -18,9 +18,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
           'pdf': ['pdfjs-dist'],
           'heic': ['heic2any'],
           'diff': ['diff-match-patch'],
+          'tiff': ['utif'],
         },
       },
     },

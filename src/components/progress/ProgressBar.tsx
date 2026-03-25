@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { OCRJobState } from '../../types/ocr'
 import type { Language } from '../../i18n'
 
@@ -44,7 +45,7 @@ const MODEL_LABELS: Record<Language, { layout: string; rec30: string; rec50: str
   },
 }
 
-export function ProgressBar({ jobState, lang }: ProgressBarProps) {
+export const ProgressBar = memo(function ProgressBar({ jobState, lang }: ProgressBarProps) {
   const { status, currentFileIndex, totalFiles, stageProgress, stage, message, modelProgress } = jobState
 
   if (status === 'idle') return null
@@ -111,4 +112,4 @@ export function ProgressBar({ jobState, lang }: ProgressBarProps) {
       </div>
     </div>
   )
-}
+})

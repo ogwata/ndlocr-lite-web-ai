@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Language } from '../../i18n'
 
 interface BottomToolbarProps {
@@ -9,7 +10,7 @@ interface BottomToolbarProps {
   hasResults: boolean
 }
 
-export function BottomToolbar({
+export const BottomToolbar = memo(function BottomToolbar({
   lang,
   onUpload,
   ocrTimeMs,
@@ -64,4 +65,4 @@ export function BottomToolbar({
       </div>
     </div>
   )
-}
+})
