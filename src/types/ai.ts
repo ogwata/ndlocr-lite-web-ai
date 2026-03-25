@@ -61,27 +61,17 @@ export const PROVIDER_ENDPOINTS: Record<AIProvider, string> = {
   custom: '',
 }
 
-/** デフォルト校正プロンプト（日本語） */
-export const DEFAULT_PROOFREAD_PROMPT_JA = `あなたはOCR校正の専門家です。以下のOCRテキストを元画像と比較し、誤認識を修正してください。
-
-重要な注意事項:
-- 旧字体（舊字體）は現代字体に変換しないでください。原文の字体をそのまま保持してください。
-- 明らかな誤認識のみを修正してください。
-- 句読点や記号の誤認識も修正してください。
-- 修正後のテキストのみを出力してください。説明は不要です。`
-
-/** デフォルト校正プロンプト（欧米諸語） */
-export const DEFAULT_PROOFREAD_PROMPT_EUROPEAN = `You are an expert OCR proofreader. Compare the following OCR text with the original image and fix recognition errors.
+/** デフォルト校正プロンプト（言語自動判定） */
+export const DEFAULT_PROOFREAD_PROMPT = `You are an expert OCR proofreader. First, identify the language of the document from the original image. Then compare the OCR text with the image and fix recognition errors according to the rules for that language.
 
 Important instructions:
 - Fix only obvious OCR misrecognitions. Do not rephrase or modernize the text.
 - Preserve the original language, spelling, and orthography exactly as in the image.
-- Fix misrecognized characters, punctuation, and diacritics (ä, ö, ü, ß, é, è, ñ, etc.).
+- For Japanese: preserve historical characters (旧字体/舊字體) without converting to modern forms.
+- For European languages: fix misrecognized diacritics (ä, ö, ü, ß, é, è, ê, ç, ñ, etc.).
+- Fix misrecognized punctuation and symbols.
 - Preserve line breaks as they appear in the OCR output.
 - Output only the corrected text. No explanations.`
-
-/** デフォルト校正プロンプト（後方互換） */
-export const DEFAULT_PROOFREAD_PROMPT = DEFAULT_PROOFREAD_PROMPT_JA
 
 /** デフォルト設定 */
 export const DEFAULT_AI_SETTINGS: AISettings = {
