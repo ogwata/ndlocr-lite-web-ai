@@ -45,9 +45,9 @@ export interface AIConnector {
 
 /** デフォルトのプロバイダモデル */
 export const DEFAULT_MODELS: Record<AIProvider, string[]> = {
-  anthropic: ['claude-sonnet-4-20250514', 'claude-haiku-4-20250414'],
+  anthropic: ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001', 'claude-haiku-4-20250414'],
   openai: ['gpt-4o', 'gpt-4o-mini'],
-  google: ['gemini-2.0-flash', 'gemini-2.5-pro-preview-06-05'],
+  google: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.0-flash-preview', 'gemini-3.0-pro-preview'],
   groq: ['llama-3.3-70b-versatile', 'gemma2-9b-it'],
   custom: [],
 }
