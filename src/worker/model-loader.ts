@@ -161,7 +161,8 @@ export async function loadModel(
   language?: RecognitionLanguage
 ): Promise<ArrayBuffer> {
   const urls = getModelUrls(language)
-  const modelUrl = urls[modelType]
+  // 数式モデルは言語に依存しないため、言語別URLになければMATH URLsをフォールバック
+  const modelUrl = urls[modelType] ?? MODEL_URLS_MATH[modelType]
   if (!modelUrl) {
     throw new Error(`Unknown model type: ${modelType} for language ${language ?? 'ja'}`)
   }
