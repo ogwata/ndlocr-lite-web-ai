@@ -118,6 +118,22 @@ export default function App() {
     setPreprocessedUrls(prev => ({ ...prev, [index]: dataUrl }))
   }, [])
 
+  const handlePreprocessAll = useCallback(async (opts: import('./components/viewer/ImagePreprocessPanel').PreprocessOptions) => {
+    const { applyPreprocess } = await import('./components/viewer/ImagePreprocessPanel')
+    const results: Record<number, string> = {}
+    for (let i = 0; i < pendingDataUrls.length; i++) {
+      const url = pendingDataUrls[i]
+      if (url) {
+        try {
+          results[i] = await applyPreprocess(url, opts)
+        } catch (err) {
+          console.error(`Batch preprocess error on image ${i}:`, err)
+        }
+      }
+    }
+    setPreprocessedUrls(prev => ({ ...prev, ...results }))
+  }, [pendingDataUrls])
+
   const handlePreprocessReset = useCallback((index: number) => {
     setPreprocessedUrls(prev => {
       const next = { ...prev }
@@ -498,6 +514,8 @@ export default function App() {
                     imageDataUrl={pendingDataUrls[pendingImageIndex] ?? ''}
                     onProcessed={(url) => handlePreprocessed(pendingImageIndex, url)}
                     onReset={() => handlePreprocessReset(pendingImageIndex)}
+                    totalImages={processedImages.length}
+                    onApplyAll={handlePreprocessAll}
                   />
                 </Suspense>
                 <ImageViewer

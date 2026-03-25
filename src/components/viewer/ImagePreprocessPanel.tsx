@@ -31,6 +31,8 @@ interface ImagePreprocessPanelProps {
   onProcessed: (dataUrl: string) => void
   onSplitPages?: (pages: string[]) => void
   onReset: () => void
+  totalImages?: number
+  onApplyAll?: (options: PreprocessOptions) => void
 }
 
 type TranslationStrings = {
@@ -176,6 +178,8 @@ export function ImagePreprocessPanel({
   onProcessed,
   onSplitPages,
   onReset,
+  totalImages,
+  onApplyAll,
 }: ImagePreprocessPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [options, setOptions] = useState<PreprocessOptions>(DEFAULT_PREPROCESS_OPTIONS)
@@ -420,6 +424,20 @@ export function ImagePreprocessPanel({
             >
               {isProcessing ? strings.processing : strings.apply}
             </button>
+            {onApplyAll && totalImages != null && totalImages > 1 && (
+              <button
+                className="preprocess-btn preprocess-btn-primary"
+                onClick={() => onApplyAll(options)}
+                disabled={isProcessing}
+                type="button"
+              >
+                {isProcessing
+                  ? strings.processing
+                  : lang === 'ja'
+                    ? `全画像に適用 (${totalImages})`
+                    : `Apply to All (${totalImages})`}
+              </button>
+            )}
             <button
               className="preprocess-btn preprocess-btn-secondary"
               onClick={handleReset}
@@ -439,7 +457,7 @@ export function ImagePreprocessPanel({
 // Image Processing Utility Functions
 // =====================================================
 
-async function applyPreprocess(
+export async function applyPreprocess(
   imageDataUrl: string,
   options: PreprocessOptions
 ): Promise<string> {
