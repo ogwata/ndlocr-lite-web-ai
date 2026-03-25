@@ -1,5 +1,7 @@
+import type { RecognitionLanguage } from './model-config'
+
 export type RecWorkerInMessage =
-  | { type: 'REC_INIT'; singleModel?: boolean }
+  | { type: 'REC_INIT'; singleModel?: boolean; language?: RecognitionLanguage }
   | { type: 'REC_PROCESS'; jobs: Array<{ id: number; croppedImageData: ImageData; charCountCategory?: number }> }
   | { type: 'REC_TERMINATE' }
 

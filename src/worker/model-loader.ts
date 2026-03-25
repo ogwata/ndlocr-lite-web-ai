@@ -14,14 +14,29 @@ export const MODEL_VERSION = '1.0.0'
 // 空の場合は /models（public/models/ からの配信）をデフォルトにする
 const MODEL_BASE_URL = (import.meta.env.VITE_MODEL_BASE_URL as string | undefined) || '/models'
 
-// ONNXモデルのURL
-export const MODEL_URLS: Record<string, string> = {
+import type { RecognitionLanguage } from '../types/model-config'
+
+// ONNXモデルのURL（日本語: NDL PARSeq × 3カスケード）
+export const MODEL_URLS_JA: Record<string, string> = {
   layout: `${MODEL_BASE_URL}/deim-s-1024x1024.onnx`,
-  // カスケード文字認識モデル（行の文字数カテゴリに応じて使い分け）
-  recognition30: `${MODEL_BASE_URL}/parseq-ndl-30.onnx`,  // カテゴリ3: ≤30文字 [1,3,16,256]
-  recognition50: `${MODEL_BASE_URL}/parseq-ndl-50.onnx`,  // カテゴリ2: ≤50文字 [1,3,16,384]
-  recognition100: `${MODEL_BASE_URL}/parseq-ndl-100.onnx`, // カテゴリ1: ≤100文字 [1,3,16,768]
+  recognition30: `${MODEL_BASE_URL}/parseq-ndl-30.onnx`,   // カテゴリ3: ≤30文字 [1,3,16,256]
+  recognition50: `${MODEL_BASE_URL}/parseq-ndl-50.onnx`,   // カテゴリ2: ≤50文字 [1,3,16,384]
+  recognition100: `${MODEL_BASE_URL}/parseq-ndl-100.onnx`,  // カテゴリ1: ≤100文字 [1,3,16,768]
 }
+
+// ONNXモデルのURL（欧米諸語: OnnxTR PARSeq multilingual × 1）
+export const MODEL_URLS_EUROPEAN: Record<string, string> = {
+  layout: `${MODEL_BASE_URL}/deim-s-1024x1024.onnx`,       // レイアウト検出は共通
+  recognitionEuropean: `${MODEL_BASE_URL}/parseq-multilingual.onnx`, // 単一モデル [1,3,32,128]
+}
+
+/** 言語に応じたモデルURL辞書を返す */
+export function getModelUrls(language: RecognitionLanguage = 'ja'): Record<string, string> {
+  return language === 'european' ? MODEL_URLS_EUROPEAN : MODEL_URLS_JA
+}
+
+// 後方互換: デフォルトは日本語
+export const MODEL_URLS = MODEL_URLS_JA
 
 function initDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -135,25 +150,30 @@ async function downloadWithProgress(
 
 export async function loadModel(
   modelType: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  language?: RecognitionLanguage
 ): Promise<ArrayBuffer> {
-  const modelUrl = MODEL_URLS[modelType]
+  const urls = getModelUrls(language)
+  const modelUrl = urls[modelType]
   if (!modelUrl) {
-    throw new Error(`Unknown model type: ${modelType}`)
+    throw new Error(`Unknown model type: ${modelType} for language ${language ?? 'ja'}`)
   }
 
-  const cached = await getModelFromCache(modelType)
+  // キャッシュキーに言語プレフィックスを付けて衝突を防止
+  const cacheKey = language && language !== 'ja' ? `${language}:${modelType}` : modelType
+
+  const cached = await getModelFromCache(cacheKey)
   if (cached) {
-    console.log(`Model ${modelType} loaded from cache`)
+    console.log(`Model ${cacheKey} loaded from cache`)
     if (onProgress) onProgress(1.0)
     return cached
   }
 
-  console.log(`Downloading model ${modelType} from ${modelUrl}`)
+  console.log(`Downloading model ${cacheKey} from ${modelUrl}`)
   const modelData = await downloadWithProgress(modelUrl, onProgress)
 
-  await saveModelToCache(modelType, modelData)
-  console.log(`Model ${modelType} cached successfully`)
+  await saveModelToCache(cacheKey, modelData)
+  console.log(`Model ${cacheKey} cached successfully`)
 
   return modelData
 }

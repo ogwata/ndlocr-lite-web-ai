@@ -1,8 +1,9 @@
 import type { TextBlock, TextRegion, PageBlock } from './ocr'
+import type { RecognitionLanguage } from './model-config'
 
 // Workerへ送信するメッセージ
 export type WorkerInMessage =
-  | { type: 'INITIALIZE'; layoutOnly?: boolean }
+  | { type: 'INITIALIZE'; layoutOnly?: boolean; language?: RecognitionLanguage }
   | {
       type: 'OCR_PROCESS'
       id: string
@@ -22,6 +23,8 @@ export interface ModelProgress {
   rec30: number
   rec50: number
   rec100: number
+  /** 欧米諸語の単一認識モデル進捗 */
+  recEuropean?: number
 }
 
 // Workerから受信するメッセージ

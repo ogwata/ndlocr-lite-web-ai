@@ -7,13 +7,17 @@ import './onnx-config'
 import { loadModel } from './model-loader'
 import { TextRecognizer } from './text-recognizer'
 import type { RecWorkerInMessage, RecWorkerOutMessage } from '../types/recognition-worker'
+import type { RecognitionLanguage } from '../types/model-config'
 
 let rec30: TextRecognizer | null = null
 let rec50: TextRecognizer | null = null
 let rec100: TextRecognizer | null = null
+let recEuropean: TextRecognizer | null = null
 let singleModelMode = false
+let currentLanguage: RecognitionLanguage = 'ja'
 
 function selectRecognizer(_charCountCategory?: number): TextRecognizer {
+  if (currentLanguage === 'european') return recEuropean!
   if (singleModelMode) return rec100!
   if (_charCountCategory === 3) return rec30!
   if (_charCountCategory === 2) return rec50!
@@ -25,8 +29,16 @@ self.onmessage = async (e: MessageEvent<RecWorkerInMessage>) => {
 
   if (msg.type === 'REC_INIT') {
     singleModelMode = msg.singleModel ?? false
+    currentLanguage = msg.language ?? 'ja'
     try {
-      if (singleModelMode) {
+      if (currentLanguage === 'european') {
+        // 欧米諸語: 単一モデル
+        const data = await loadModel('recognitionEuropean', (p) => {
+          self.postMessage({ type: 'REC_PROGRESS', progress: p } satisfies RecWorkerOutMessage)
+        }, currentLanguage)
+        recEuropean = new TextRecognizer([1, 3, 32, 128], true)
+        await recEuropean.initialize(data)
+      } else if (singleModelMode) {
         const d100 = await loadModel('recognition100', (p) => {
           self.postMessage({ type: 'REC_PROGRESS', progress: p } satisfies RecWorkerOutMessage)
         })

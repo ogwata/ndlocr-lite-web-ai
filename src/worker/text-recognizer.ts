@@ -12,6 +12,11 @@ interface RecognizerConfig {
   inputShape: [number, number, number, number]
   charList: string[]
   maxLength: number
+  /** 正規化: 'symmetric' = [-1,1] (日本語), 'custom' = 欧米諸語用 mean/std */
+  normalization: 'symmetric' | 'custom'
+  /** custom normalization の mean/std (欧米諸語用) */
+  mean?: [number, number, number]
+  std?: [number, number, number]
 }
 
 interface RecognitionResult {
@@ -50,11 +55,17 @@ export class TextRecognizer {
   private initialized = false
   private config: RecognizerConfig
 
-  constructor(inputShape?: [number, number, number, number]) {
+  private isEuropean: boolean
+
+  constructor(inputShape?: [number, number, number, number], european = false) {
+    this.isEuropean = european
     this.config = {
-      inputShape: inputShape ?? [1, 3, 16, 384],
+      inputShape: inputShape ?? (european ? [1, 3, 32, 128] : [1, 3, 16, 384]),
       charList: [],
       maxLength: 25,
+      normalization: european ? 'custom' : 'symmetric',
+      mean: european ? [0.694, 0.695, 0.693] : undefined,
+      std: european ? [0.299, 0.296, 0.301] : undefined,
     }
   }
 
@@ -73,6 +84,16 @@ export class TextRecognizer {
   }
 
   private async loadConfig(): Promise<void> {
+    if (this.isEuropean) {
+      // 欧米諸語: OnnxTR PARSeq multilingual の固定語彙（195文字）
+      const EUROPEAN_VOCAB = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~°£€¥¢฿àâéèêëîïôùûüçÀÂÉÈÊËÎÏÔÙÛÜÇáãíóõúÁÃÍÓÕÚñÑ¡¿äößÄÖẞčďěňřšťůýžČĎĚŇŘŠŤŮÝŽąćęłńśźżĄĆĘŁŃŚŹŻìòÌÒæøåÆØÅ§'
+      this.config.charList = EUROPEAN_VOCAB.split('')
+      this.config.maxLength = 32
+      console.log(`European character list loaded: ${this.config.charList.length} characters`)
+      return
+    }
+
+    // 日本語: NDLMoji.yaml から文字セットを読み込み
     const yamlConfig = await loadSharedConfig()
     if (!yamlConfig) return
 
@@ -170,14 +191,21 @@ export class TextRecognizer {
     const resized = resizeCtx.getImageData(0, 0, width, height)
     const { data } = resized
 
-    // Float32Array: [-1, 1] 正規化 (NCHW形式)
+    // Float32Array: NCHW形式の正規化
     const tensorData = new Float32Array(channels * height * width)
+    const { normalization, mean, std } = this.config
     for (let h = 0; h < height; h++) {
       for (let w = 0; w < width; w++) {
         const pixelOffset = (h * width + w) * 4
         for (let c = 0; c < channels; c++) {
           const value = data[pixelOffset + c] / 255.0
-          tensorData[c * height * width + h * width + w] = 2.0 * (value - 0.5)
+          if (normalization === 'custom' && mean && std) {
+            // 欧米諸語: (value - mean) / std
+            tensorData[c * height * width + h * width + w] = (value - mean[c]) / std[c]
+          } else {
+            // 日本語: [-1, 1] symmetric normalization
+            tensorData[c * height * width + h * width + w] = 2.0 * (value - 0.5)
+          }
         }
       }
     }
@@ -201,25 +229,40 @@ export class TextRecognizer {
       const resultClassIds: number[] = []
       const charConfidences: number[] = []
 
-      for (let i = 0; i < seqLength; i++) {
-        const scores = logits.slice(i * vocabSize, (i + 1) * vocabSize)
-        const maxScore = Math.max(...scores)
-        const maxIndex = scores.indexOf(maxScore)
+      if (this.isEuropean) {
+        // 欧米諸語: OnnxTR PARSeq — vocab(0..194) + <eos>(195)
+        const eosIndex = this.config.charList.length // = 195
+        for (let i = 0; i < seqLength; i++) {
+          const scores = logits.slice(i * vocabSize, (i + 1) * vocabSize)
+          const maxScore = Math.max(...scores)
+          const maxIndex = scores.indexOf(maxScore)
 
-        // <eos> (ID=0) で終了
-        if (maxIndex === 0) break
-        // 特殊トークン (<s>=1, </s>=2, <pad>=3) をスキップ
-        if (maxIndex < 4) continue
+          if (maxIndex === eosIndex) break // <eos>
 
-        // softmax確率を計算（数値安定性のためmaxを引く）
-        let sumExp = 0
-        for (let j = 0; j < vocabSize; j++) {
-          sumExp += Math.exp(scores[j] - maxScore)
+          let sumExp = 0
+          for (let j = 0; j < vocabSize; j++) {
+            sumExp += Math.exp(scores[j] - maxScore)
+          }
+          charConfidences.push(1.0 / sumExp)
+          resultClassIds.push(maxIndex)
         }
-        const prob = 1.0 / sumExp // = exp(maxScore - maxScore) / sumExp
-        charConfidences.push(prob)
+      } else {
+        // 日本語: NDL PARSeq — <eos>=0, <s>=1, </s>=2, <pad>=3, then vocab
+        for (let i = 0; i < seqLength; i++) {
+          const scores = logits.slice(i * vocabSize, (i + 1) * vocabSize)
+          const maxScore = Math.max(...scores)
+          const maxIndex = scores.indexOf(maxScore)
 
-        resultClassIds.push(maxIndex - 1)
+          if (maxIndex === 0) break // <eos>
+          if (maxIndex < 4) continue // skip special tokens
+
+          let sumExp = 0
+          for (let j = 0; j < vocabSize; j++) {
+            sumExp += Math.exp(scores[j] - maxScore)
+          }
+          charConfidences.push(1.0 / sumExp)
+          resultClassIds.push(maxIndex - 1) // offset by 4 special tokens, but -1 because charset starts at index 3+1=4 mapped to charList[0]
+        }
       }
 
       // 連続重複を除去してテキスト生成
@@ -228,7 +271,7 @@ export class TextRecognizer {
       let prevId = -1
       for (let i = 0; i < resultClassIds.length; i++) {
         const id = resultClassIds[i]
-        if (id !== prevId && id < this.config.charList.length) {
+        if (id !== prevId && id >= 0 && id < this.config.charList.length) {
           resultChars.push(this.config.charList[id])
           filteredConfidences.push(charConfidences[i])
           prevId = id

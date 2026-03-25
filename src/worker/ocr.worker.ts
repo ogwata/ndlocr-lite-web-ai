@@ -21,23 +21,27 @@ import { TextRecognizer } from './text-recognizer'
 import { ReadingOrderProcessor } from './reading-order'
 import type { TextBlock } from '../types/ocr'
 import type { WorkerInMessage, WorkerOutMessage } from '../types/worker'
+import type { RecognitionLanguage } from '../types/model-config'
 
 class OCRWorker {
   private layoutDetector: LayoutDetector | null = null
-  private recognizer30: TextRecognizer | null = null  // ≤30文字 [1,3,16,256]
-  private recognizer50: TextRecognizer | null = null  // ≤50文字 [1,3,16,384]
-  private recognizer100: TextRecognizer | null = null // ≤100文字 [1,3,16,768]
+  private recognizer30: TextRecognizer | null = null  // ≤30文字 [1,3,16,256] (日本語)
+  private recognizer50: TextRecognizer | null = null  // ≤50文字 [1,3,16,384] (日本語)
+  private recognizer100: TextRecognizer | null = null // ≤100文字 [1,3,16,768] (日本語)
+  private recognizerEuropean: TextRecognizer | null = null // 欧米諸語 [1,3,32,128]
   private readingOrderProcessor = new ReadingOrderProcessor()
   private isInitialized = false
   private layoutOnly = false
+  private language: RecognitionLanguage = 'ja'
 
   private post(message: WorkerOutMessage) {
     self.postMessage(message)
   }
 
-  async initialize(layoutOnly = false): Promise<void> {
+  async initialize(layoutOnly = false, language: RecognitionLanguage = 'ja'): Promise<void> {
     if (this.isInitialized) return
     this.layoutOnly = layoutOnly
+    this.language = language
 
     try {
       this.post({
@@ -61,8 +65,34 @@ class OCRWorker {
         this.post({ type: 'OCR_PROGRESS', stage: 'initializing_models', progress: 0.76, message: 'Preparing layout model...' })
         this.layoutDetector = new LayoutDetector()
         await this.layoutDetector.initialize(layoutModelData)
+      } else if (language === 'european') {
+        // 欧米諸語: layout + 単一認識モデル
+        const progresses = { layout: 0, rec30: 0, rec50: 0, rec100: 0, recEuropean: 0 }
+        const reportProgress = () => {
+          const avg = (progresses.layout + progresses.recEuropean!) / 2
+          this.post({
+            type: 'OCR_PROGRESS',
+            stage: 'loading_models',
+            progress: 0.02 + avg * 0.73,
+            message: `Loading models... ${Math.round(avg * 100)}%`,
+            modelProgress: { ...progresses },
+          })
+        }
+
+        const [layoutModelData, recEuropeanData] = await Promise.all([
+          loadModel('layout',              (p) => { progresses.layout = p; reportProgress() }, language),
+          loadModel('recognitionEuropean', (p) => { progresses.recEuropean = p; reportProgress() }, language),
+        ])
+
+        this.post({ type: 'OCR_PROGRESS', stage: 'initializing_models', progress: 0.76, message: 'Preparing layout model...' })
+        this.layoutDetector = new LayoutDetector()
+        await this.layoutDetector.initialize(layoutModelData)
+
+        this.post({ type: 'OCR_PROGRESS', stage: 'initializing_models', progress: 0.90, message: 'Preparing recognition model (European)...' })
+        this.recognizerEuropean = new TextRecognizer([1, 3, 32, 128], true)
+        await this.recognizerEuropean.initialize(recEuropeanData)
       } else {
-        // デスクトップ: 4モデルを並列ダウンロード（各モデルの進捗を合算してレポート）
+        // 日本語: 4モデルを並列ダウンロード（各モデルの進捗を合算してレポート）
         const progresses = { layout: 0, rec30: 0, rec50: 0, rec100: 0 }
         const reportProgress = () => {
           const avg = (progresses.layout + progresses.rec30 + progresses.rec50 + progresses.rec100) / 4
@@ -120,6 +150,14 @@ class OCRWorker {
 
   /** 認識モデルを遅延ロード（layoutOnly モードで processOCR が呼ばれた場合） */
   private async ensureRecognizers(): Promise<void> {
+    if (this.language === 'european') {
+      if (this.recognizerEuropean) return
+      const data = await loadModel('recognitionEuropean', undefined, this.language)
+      this.recognizerEuropean = new TextRecognizer([1, 3, 32, 128], true)
+      await this.recognizerEuropean.initialize(data)
+      return
+    }
+
     if (this.recognizer100) return  // rec100 があれば最低限OK
 
     if (this.layoutOnly) {
@@ -146,6 +184,7 @@ class OCRWorker {
 
   /** charCountCategory に応じたモデルを選択 */
   private selectRecognizer(charCountCategory?: number): TextRecognizer {
+    if (this.language === 'european') return this.recognizerEuropean!
     if (!this.layoutOnly) {
       if (charCountCategory === 3) return this.recognizer30!
       if (charCountCategory === 2) return this.recognizer50!
@@ -311,7 +350,7 @@ self.onmessage = async (event: MessageEvent<WorkerInMessage>) => {
 
   switch (message.type) {
     case 'INITIALIZE':
-      await ocrWorker.initialize(message.layoutOnly)
+      await ocrWorker.initialize(message.layoutOnly, message.language)
       break
 
     case 'OCR_PROCESS':

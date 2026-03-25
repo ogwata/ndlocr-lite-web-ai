@@ -2,6 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import type { OCRJobState, OCRResult, ProcessedImage, TextBlock, TextRegion, PageBlock } from '../types/ocr'
 import type { WorkerInMessage, WorkerOutMessage } from '../types/worker'
 import type { RecWorkerInMessage, RecWorkerOutMessage } from '../types/recognition-worker'
+import { loadModelConfig } from '../types/model-config'
 import { imageDataToDataUrl } from '../utils/imageLoader'
 import { ReadingOrderProcessor } from '../worker/reading-order'
 // ?worker import → Vite が recognition.worker.ts を独立バンドルして Worker コンストラクタを返す
@@ -55,8 +56,9 @@ export function useOCRWorker() {
         }
       }
 
-      // OCR Worker 初期化
-      worker.postMessage({ type: 'INITIALIZE', layoutOnly: isMobile } satisfies WorkerInMessage)
+      // OCR Worker 初期化（モデル構成をlocalStorageから読み込んで渡す）
+      const modelConfig = loadModelConfig()
+      worker.postMessage({ type: 'INITIALIZE', layoutOnly: isMobile, language: modelConfig.language } satisfies WorkerInMessage)
 
       worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
         const msg = event.data
@@ -86,7 +88,7 @@ export function useOCRWorker() {
             checkBothReady()
           }
         }
-        w.postMessage({ type: 'REC_INIT', singleModel: isMobile } satisfies RecWorkerInMessage)
+        w.postMessage({ type: 'REC_INIT', singleModel: isMobile, language: modelConfig.language } satisfies RecWorkerInMessage)
       })
     }
 
