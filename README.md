@@ -15,14 +15,16 @@
 - **PDF・複数形式対応** — JPG / PNG / TIFF / HEIC / PDF（複数ページ対応）
 - **バッチ処理** — 複数の画像ファイルやフォルダをまとめて処理
 - **結果のキャッシュ** — IndexedDBにモデルと処理結果（最新100件）を保存し、再利用可能
-- **画像ビューア** — Fit-to-view自動フィット、ズーム（+/−ボタン）、パン/選択モード切替、OCR検出矩形のオーバーレイ表示
+- **画像ビューア** — Fit-to-view自動フィット、ズーム（+/−ボタン）、パン/選択モード切替、OCR検出矩形のオーバーレイ表示、テキストオーバーレイ・信頼度ヒートマップ・読み順表示の切替
 - **領域選択OCR** — 画像上でマウスドラッグして選択した領域だけをOCR → そのままAI校正も可能
-- **画像前処理** — 明るさ・コントラスト・シャープネス調整、二値化、ノイズ除去、傾き補正、ページ分割
+- **画像前処理** — 明るさ・コントラスト・シャープネス調整、二値化、ノイズ除去、傾き補正、湾曲補正（dewarp）、ページ分割。複数画像への一括適用にも対応
 - **ダークモード** — OS設定に追従するライト/ダークテーマ切替
 - **縦書き表示** — テキストエリアの縦書き表示モード切替
 - **検索・置換** — テキストエリア内の検索・置換機能（Ctrl+F）
 - **多言語UI** — 日本語・英語・中国語（繁体/簡体）・韓国語の5言語対応
-- **TEI/hOCRエクスポート** — OCR結果をTEI P5 XML（人文学研究向け）やhOCR形式でダウンロード可能
+- **TEI/hOCRエクスポート** — OCR結果をTEI P5 XML（人文学研究向け）やhOCR形式でダウンロード可能（複数ページの一括エクスポートにも対応）
+- **undo/redo** — テキスト編集のundo/redo（Ctrl+Z / Ctrl+Shift+Z）
+- **バッチ処理の中断** — 複数ファイルのOCR処理を途中で停止可能（処理済みの結果は保持）
 
 ## 使い方
 
@@ -176,6 +178,21 @@ npm run mcp-server
 - **ndlocr-lite-web-ai-deluxe:** [somiyagawa/ndlocr-lite-web-ai-deluxe](https://github.com/somiyagawa/ndlocr-lite-web-ai-deluxe)（宮川創氏） — 画像前処理、ダークモード、多言語UI、縦書き表示等
 
 ## 変更履歴
+
+### v0.5.0（2026-03-25）
+
+deluxeリポジトリからの機能取り込み:
+
+- feat: 画像前処理に湾曲補正（dewarp）を追加 — 綴じ部分の歪みを自動検出・補正
+- feat: 画像前処理の一括適用 — 現在の前処理設定を全画像にバッチ適用する「全画像に適用」ボタン
+- feat: ImageViewerに3つの表示モード — テキストオーバーレイ、信頼度ヒートマップ（赤=低→緑=高）、読み順番号バッジ
+- feat: OCR処理の中断機能 — バッチ処理中に「停止」ボタンで次のファイルの前に中断（処理済み結果は保持）
+- feat: TextEditorにundo/redo — 500msデバウンスで編集履歴を記録、Ctrl+Z / Ctrl+Shift+Z
+- feat: TEI/hOCRのバッチエクスポート — 複数ページのOCR結果をまとめて1ファイルとしてダウンロード
+- feat: AIモデルリスト更新 — claude-haiku-4-5、Gemini 2.5-flash/pro、Gemini 3.0-flash/pro-preview
+- perf: React.memo最適化 — Header/Footer/BottomToolbar/ProgressBarの不要な再レンダリングを防止
+- perf: Viteチャンク分割改善 — react-vendor/tiffの分離でキャッシュ効率向上
+- perf: React.lazyによる遅延読み込み — HistoryPanel/SettingsModal/ImagePreprocessPanel
 
 ### v0.4.3（2026-03-23）
 

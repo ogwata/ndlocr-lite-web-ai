@@ -7,9 +7,12 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - ブラウザ内でONNX Runtime Web（WASM）によるOCR推論を実行
 - サーバーに画像を送信しない完全クライアントサイド処理
 - AI（Claude, GPT, Gemini等）によるOCR結果の校正機能を付加
-- 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・ページ分割）
+- 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割・一括適用）
 - ダークモード（OS設定追従）、多言語UI（日英中韓）、縦書き表示モード
-- OCR結果のTEI P5 XML / hOCRエクスポート
+- OCR結果のTEI P5 XML / hOCRエクスポート（単一ページ / バッチ）
+- ImageViewer表示モード（テキストオーバーレイ・信頼度ヒートマップ・読み順表示）
+- TextEditorのundo/redo（デバウンス付き編集履歴スタック）
+- バッチOCR処理の中断機能
 
 詳細な開発計画は `docs/NDLOCR-Lite-Web-AI-開発計画書.md` を参照。
 
@@ -59,11 +62,11 @@ ndlocr-lite-web-ai/
 │   │   │   ├── Header.tsx         # ヘッダー（バージョンバッジ + AI接続ステータス + 言語/テーマ切替）
 │   │   │   └── Footer.tsx         # フッター（クレジット表記）
 │   │   ├── editor/
-│   │   │   ├── TextEditor.tsx     # 編集可能テキストエリア + AI校正 + 検索置換 + 縦書き表示
+│   │   │   ├── TextEditor.tsx     # 編集可能テキストエリア + AI校正 + 検索置換 + 縦書き表示 + undo/redo
 │   │   │   └── DiffView.tsx       # 差分表示（accept/reject UI付き）
 │   │   ├── viewer/
-│   │   │   ├── ImageViewer.tsx    # 画像表示（ズーム/スクロール + 領域選択 + ページ/サイズ情報）
-│   │   │   └── ImagePreprocessPanel.tsx # 画像前処理パネル（明るさ・コントラスト・二値化・傾き補正等）
+│   │   │   ├── ImageViewer.tsx    # 画像表示（ズーム/スクロール + 領域選択 + 表示モード切替）
+│   │   │   └── ImagePreprocessPanel.tsx # 画像前処理パネル（明るさ・コントラスト・二値化・傾き補正・湾曲補正等）
 │   │   ├── settings/SettingsModal.tsx # AI接続設定 + キャッシュ管理
 │   │   └── ...                    # その他UIコンポーネント
 │   ├── hooks/
@@ -74,8 +77,9 @@ ndlocr-lite-web-ai/
 │   ├── utils/
 │   │   ├── crypto.ts              # APIキー暗号化（Web Crypto API）
 │   │   ├── imagePreprocess.ts     # 画像前処理ユーティリティ
-│   │   ├── exportTEI.ts           # TEI P5 XMLエクスポート
-│   │   └── exportHOCR.ts          # hOCRエクスポート
+│   │   ├── exportTEI.ts           # TEI P5 XMLエクスポート（単一 / バッチ）
+│   │   ├── exportHOCR.ts          # hOCRエクスポート（単一 / バッチ）
+│   │   └── dewarp.ts              # 湾曲補正（大津二値化 + ストリップ曲率計測 + バイリニア補間）
 │   ├── types/ai.ts                # AI関連の型定義
 │   └── ...                   # OCR処理、hooks、utils等
 ├── docs/
@@ -151,6 +155,7 @@ ndlocr-lite-web-ai/
 - Spaceキー押下中の一時パンモード（選択モード中でもSpaceでパン操作可能）
 - ボタンズーム時のスムーズトランジション
 - OCR検出されたテキスト行の矩形をオーバーレイ（青枠、半透明）
+- 表示モード切替: テキストオーバーレイ（認識テキストを画像上に表示）、信頼度ヒートマップ（赤=低→緑=高）、読み順番号バッジ
 - 領域選択: 選択モードでマウスドラッグ → オレンジ枠ハイライト → 「選択領域のOCRを開始」ボタンで部分OCR
 - 画像下部にページ番号（page N/M）と画像サイズ表示
 
@@ -161,7 +166,7 @@ ndlocr-lite-web-ai/
 - テキスト検索・置換機能（Ctrl+F、単一/全置換、マッチナビゲーション）
 - 行番号表示（スクロール同期、縦書き時は上部に右→左で表示）
 - ビューポート高さの70-80%、overflow-y: auto でスクロール可能
-- パネル上部にボタン群: 「AI校正」（紫グラデーション）「コピー」「TXT」「TEI」「hOCR」（現在表示中のテキスト/OCR結果が対象）
+- パネル上部にボタン群: undo/redo、検索、行番号、縦書き切替、「AI校正」（紫グラデーション）「コピー」「TXT」「TEI」「hOCR」（現在表示中のテキスト/OCR結果が対象）
 - AI校正後の差分表示: 削除部分＝赤背景+取消線、追加部分＝緑背景のインライン表示
 - 各修正箇所に✓（適用）/✗（却下）ボタン、ctrl+zでアンドゥ可能
 - 「新しいファイルを処理」クリック時にOCR結果の破棄確認ダイアログを表示
