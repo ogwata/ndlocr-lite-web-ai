@@ -56,7 +56,7 @@ export function generateTEI(result: OCRResult): string {
     </fileDesc>
     <encodingDesc>
       <appInfo>
-        <application ident="ndlocr-lite-web-ai" version="0.5.0">
+        <application ident="ndlocr-lite-web-ai" version="0.6.0">
           <label>NDLOCR-Lite Web AI</label>
         </application>
       </appInfo>
@@ -177,7 +177,7 @@ ${lines}
     </fileDesc>
     <encodingDesc>
       <appInfo>
-        <application ident="ndlocr-lite-web-ai" version="0.5.0">
+        <application ident="ndlocr-lite-web-ai" version="0.6.0">
           <label>NDLOCR-Lite Web AI</label>
         </application>
       </appInfo>

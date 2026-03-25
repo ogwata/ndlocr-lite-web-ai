@@ -47,7 +47,7 @@ function cropRegion(srcDataUrl: string, bbox: BoundingBox) {
 
 export default function App() {
   const { lang, toggleLanguage } = useI18n()
-  const { isReady, jobState, processImage, processRegion, resetState } = useOCRWorker()
+  const { isReady, jobState, processImage, processRegion, resetState, ensureLanguage } = useOCRWorker()
   const { processedImages, isLoading: isLoadingFiles, processFiles, clearImages, fileLoadingState } = useFileProcessor()
   const { runs: historyRuns, saveRun, clearResults } = useResultCache()
   const {
@@ -66,15 +66,7 @@ export default function App() {
   const handleDocumentLanguageChange = useCallback((lang: DocumentLanguage) => {
     setDocumentLanguage(lang)
     saveDocumentLanguage(lang)
-    // 言語変更でOCRモデルが変わる場合（ja↔european）、Worker再初期化が必要
-    // → リロードで対応
-    const currentRecLang = getRecognitionLanguage(documentLanguage)
-    const newRecLang = getRecognitionLanguage(lang)
-    if (currentRecLang !== newRecLang) {
-      // モデル構成を更新してリロード
-      window.location.reload()
-    }
-  }, [documentLanguage])
+  }, [])
 
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
@@ -257,6 +249,9 @@ export default function App() {
 
     const runOCR = async () => {
       setIsProcessing(true)
+
+      // 文書言語に応じたOCRモデルが初期化済みか確認し、必要なら再初期化
+      await ensureLanguage(getRecognitionLanguage(documentLanguage))
 
       // 領域選択がある場合 → その領域だけOCR
       if (selectedRegion) {

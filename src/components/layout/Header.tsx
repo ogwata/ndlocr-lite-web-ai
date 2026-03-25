@@ -52,7 +52,7 @@ export const Header = memo(function Header({
     <header className="header">
       <button className="header-title" onClick={onLogoClick}>
         <h1>NDLOCR-Lite Web AI</h1>
-        <span className="header-version">v0.5.0</span>
+        <span className="header-version">v0.6.0</span>
       </button>
       <div className="header-actions">
         <span className={statusClass} title={statusText}>

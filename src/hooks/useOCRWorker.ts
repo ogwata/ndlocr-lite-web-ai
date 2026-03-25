@@ -3,6 +3,7 @@ import type { OCRJobState, OCRResult, ProcessedImage, TextBlock, TextRegion, Pag
 import type { WorkerInMessage, WorkerOutMessage } from '../types/worker'
 import type { RecWorkerInMessage, RecWorkerOutMessage } from '../types/recognition-worker'
 import { loadDocumentLanguage, getRecognitionLanguage } from '../types/model-config'
+import type { RecognitionLanguage } from '../types/model-config'
 import { imageDataToDataUrl } from '../utils/imageLoader'
 import { ReadingOrderProcessor } from '../worker/reading-order'
 // ?worker import → Vite が recognition.worker.ts を独立バンドルして Worker コンストラクタを返す
@@ -25,15 +26,18 @@ const initialJobState: OCRJobState = {
 export function useOCRWorker() {
   const workerRef = useRef<Worker | null>(null)
   const recWorkersRef = useRef<Worker[]>([])
+  const currentLanguageRef = useRef<RecognitionLanguage | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [jobState, setJobState] = useState<OCRJobState>(initialJobState)
 
-  // OCR Worker + 認識 Worker を起動（UIレンダリング完了後に遅延起動して初期描画を高速化）
-  useEffect(() => {
-    let cancelled = false
+  /** Worker群を生成し指定言語で初期化。Promiseで完了を通知。 */
+  const initWorkers = useCallback((recLanguage: RecognitionLanguage): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      // 既存Workerを破棄
+      workerRef.current?.terminate()
+      recWorkersRef.current.forEach((w) => w.terminate())
 
-    const initWorkers = () => {
-      if (cancelled) return
+      setIsReady(false)
 
       const worker = new Worker(
         new URL('../worker/ocr.worker.ts', import.meta.url),
@@ -41,11 +45,10 @@ export function useOCRWorker() {
       )
       workerRef.current = worker
 
-      // N 本の認識 Worker を ?worker import から生成（Vite が正しくバンドル）
       const recWorkers: Worker[] = Array.from({ length: N_REC_WORKERS }, () => new RecognitionWorkerFactory())
       recWorkersRef.current = recWorkers
+      currentLanguageRef.current = recLanguage
 
-      // 初期化完了フラグ（OCR Worker + 認識 Workers の両方が揃ったら isReady = true）
       let ocrWorkerReady = false
       let recReadyCount = 0
 
@@ -53,11 +56,10 @@ export function useOCRWorker() {
         if (ocrWorkerReady && (N_REC_WORKERS === 0 || recReadyCount >= N_REC_WORKERS)) {
           setIsReady(true)
           setJobState(initialJobState)
+          resolve()
         }
       }
 
-      // OCR Worker 初期化（文書言語からOCRモデル種別を決定してWorkerに渡す）
-      const recLanguage = getRecognitionLanguage(loadDocumentLanguage())
       worker.postMessage({ type: 'INITIALIZE', layoutOnly: isMobile, language: recLanguage } satisfies WorkerInMessage)
 
       worker.onmessage = (event: MessageEvent<WorkerOutMessage>) => {
@@ -79,7 +81,6 @@ export function useOCRWorker() {
         }
       }
 
-      // 認識 Worker 初期化
       recWorkers.forEach((w) => {
         w.onmessage = (e: MessageEvent<RecWorkerOutMessage>) => {
           if (e.data.type === 'REC_READY') {
@@ -90,13 +91,21 @@ export function useOCRWorker() {
         }
         w.postMessage({ type: 'REC_INIT', singleModel: isMobile, language: recLanguage } satisfies RecWorkerInMessage)
       })
-    }
+    })
+  }, [])
 
-    // requestIdleCallback でUIレンダリング後にワーカー起動（初期描画を阻害しない）
+  /** 文書言語変更時にWorkerを再初期化する（言語が変わった場合のみ） */
+  const ensureLanguage = useCallback(async (recLanguage: RecognitionLanguage) => {
+    if (currentLanguageRef.current === recLanguage && isReady) return
+    await initWorkers(recLanguage)
+  }, [initWorkers, isReady])
+
+  // 初回起動: UIレンダリング後にWorker起動
+  useEffect(() => {
+    const recLanguage = getRecognitionLanguage(loadDocumentLanguage())
     if ('requestIdleCallback' in window) {
-      const id = requestIdleCallback(() => initWorkers(), { timeout: 500 })
+      const id = requestIdleCallback(() => { initWorkers(recLanguage) }, { timeout: 500 })
       return () => {
-        cancelled = true
         cancelIdleCallback(id)
         workerRef.current?.terminate()
         recWorkersRef.current.forEach((w) => w.terminate())
@@ -104,9 +113,8 @@ export function useOCRWorker() {
         recWorkersRef.current = []
       }
     } else {
-      const timer = setTimeout(initWorkers, 100)
+      const timer = setTimeout(() => { initWorkers(recLanguage) }, 100)
       return () => {
-        cancelled = true
         clearTimeout(timer)
         workerRef.current?.terminate()
         recWorkersRef.current.forEach((w) => w.terminate())
@@ -114,7 +122,7 @@ export function useOCRWorker() {
         recWorkersRef.current = []
       }
     }
-  }, [])
+  }, [initWorkers])
 
   /**
    * processImage: バッチOCR用（LAYOUT_DETECT → 並列認識 → 読み順）
@@ -360,5 +368,5 @@ export function useOCRWorker() {
     setJobState(initialJobState)
   }, [])
 
-  return { isReady, jobState, processImage, processRegion, resetState }
+  return { isReady, jobState, processImage, processRegion, resetState, ensureLanguage }
 }
