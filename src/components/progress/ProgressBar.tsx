@@ -22,27 +22,6 @@ const MODEL_LABELS: Record<Language, { layout: string; rec30: string; rec50: str
     rec100: 'Recognition model (≤100 chars)',
     downloading: 'Downloading models',
   },
-  'zh-CN': {
-    layout: '布局检测模型',
-    rec30: '识别模型（≤30字符）',
-    rec50: '识别模型（≤50字符）',
-    rec100: '识别模型（≤100字符）',
-    downloading: '正在下载模型',
-  },
-  'zh-TW': {
-    layout: '佈局偵測模型',
-    rec30: '識別模型（≤30字符）',
-    rec50: '識別模型（≤50字符）',
-    rec100: '識別模型（≤100字符）',
-    downloading: '正在下載模型',
-  },
-  ko: {
-    layout: '레이아웃 감지 모델',
-    rec30: '인식 모델 (≤30문자)',
-    rec50: '인식 모델 (≤50문자)',
-    rec100: '인식 모델 (≤100문자)',
-    downloading: '모델 다운로드 중',
-  },
 }
 
 export const ProgressBar = memo(function ProgressBar({ jobState, lang }: ProgressBarProps) {

@@ -5,10 +5,10 @@ import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import type { Theme } from '../../hooks/useTheme'
 
 const STATUS_LABELS: Record<AIConnectionStatus, Record<string, string>> = {
-  connected:    { ja: 'AI接続済み', en: 'AI Connected', 'zh-CN': 'AI已连接', 'zh-TW': 'AI已連接', ko: 'AI 연결됨' },
-  connecting:   { ja: 'AI接続中...', en: 'AI Connecting...', 'zh-CN': 'AI连接中...', 'zh-TW': 'AI連接中...', ko: 'AI 연결 중...' },
-  error:        { ja: 'AI接続エラー', en: 'AI Error', 'zh-CN': 'AI连接错误', 'zh-TW': 'AI連接錯誤', ko: 'AI 오류' },
-  disconnected: { ja: 'AI未接続', en: 'AI Disconnected', 'zh-CN': 'AI未连接', 'zh-TW': 'AI未連接', ko: 'AI 미연결' },
+  connected:    { ja: 'AI接続済み', en: 'AI Connected' },
+  connecting:   { ja: 'AI接続中...', en: 'AI Connecting...' },
+  error:        { ja: 'AI接続エラー', en: 'AI Error' },
+  disconnected: { ja: 'AI未接続', en: 'AI Disconnected' },
 }
 
 interface HeaderProps {
@@ -38,10 +38,10 @@ export const Header = memo(function Header({
     ?? ''
 
   const THEME_LABELS: Record<string, Record<string, string>> = {
-    toLight: { ja: 'ライトモードに切替', en: 'Switch to Light Mode', 'zh-CN': '切换到浅色模式', 'zh-TW': '切換到淺色模式', ko: '라이트 모드로 전환' },
-    toDark:  { ja: 'ダークモードに切替', en: 'Switch to Dark Mode', 'zh-CN': '切换到深色模式', 'zh-TW': '切換到深色模式', ko: '다크 모드로 전환' },
-    history: { ja: '処理履歴', en: 'History', 'zh-CN': '处理历史', 'zh-TW': '處理紀錄', ko: '처리 기록' },
-    settings: { ja: '設定', en: 'Settings', 'zh-CN': '设置', 'zh-TW': '設定', ko: '설정' },
+    toLight: { ja: 'ライトモードに切替', en: 'Switch to Light Mode' },
+    toDark:  { ja: 'ダークモードに切替', en: 'Switch to Dark Mode' },
+    history: { ja: '処理履歴', en: 'History' },
+    settings: { ja: '設定', en: 'Settings' },
   }
 
   const themeTitle = theme === 'dark'

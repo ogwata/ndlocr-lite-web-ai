@@ -1,30 +1,21 @@
 import { ja } from './ja'
 import { en } from './en'
-import { zhCN } from './zh-CN'
-import { zhTW } from './zh-TW'
-import { ko } from './ko'
 
-export type Language = 'ja' | 'en' | 'zh-CN' | 'zh-TW' | 'ko'
+export type Language = 'ja' | 'en'
 export type TranslationParams = Record<string, string | number>
 
 /** Display labels for the language selector */
 export const LANGUAGE_LABELS: Record<Language, string> = {
   ja: '日本語',
   en: 'English',
-  'zh-CN': '简体中文',
-  'zh-TW': '繁體中文',
-  ko: '한국어',
 }
 
 /** All supported language codes, in display order */
-export const LANGUAGES: Language[] = ['ja', 'en', 'zh-CN', 'zh-TW', 'ko']
+export const LANGUAGES: Language[] = ['ja', 'en']
 
 const translations: Record<Language, Record<string, Record<string, string>>> = {
   ja,
   en,
-  'zh-CN': zhCN,
-  'zh-TW': zhTW,
-  ko,
 }
 
 function getNestedValue(obj: Record<string, unknown>, key: string): string {
@@ -61,8 +52,6 @@ export function getStoredLang(): Language {
   // Try to detect from browser locale
   const browserLang = navigator.language
   if (browserLang.startsWith('ja')) return 'ja'
-  if (browserLang.startsWith('ko')) return 'ko'
-  if (browserLang === 'zh-TW' || browserLang === 'zh-Hant') return 'zh-TW'
-  if (browserLang.startsWith('zh')) return 'zh-CN'
+  if (browserLang.startsWith('en')) return 'en'
   return 'ja'
 }

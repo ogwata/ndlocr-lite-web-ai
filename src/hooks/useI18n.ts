@@ -24,7 +24,7 @@ export function useI18n() {
       next = e.target.value as Language
     } else {
       // cycle fallback (unused but keeps compat)
-      const order: Language[] = ['ja', 'en', 'zh-CN', 'zh-TW', 'ko']
+      const order: Language[] = ['ja', 'en']
       const idx = order.indexOf(lang)
       next = order[(idx + 1) % order.length]
     }
