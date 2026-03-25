@@ -6,6 +6,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 
 - ブラウザ内でONNX Runtime Web（WASM）によるOCR推論を実行
 - サーバーに画像を送信しない完全クライアントサイド処理
+- 日本語 / 欧米諸語（英独仏西葡伊蘭捷波丹諾芬の12言語）の認識言語切替
 - AI（Claude, GPT, Gemini等）によるOCR結果の校正機能を付加
 - 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割・一括適用）
 - ダークモード（OS設定追従）、多言語UI（日英）、縦書き表示モード
@@ -80,7 +81,9 @@ ndlocr-lite-web-ai/
 │   │   ├── exportTEI.ts           # TEI P5 XMLエクスポート（単一 / バッチ）
 │   │   ├── exportHOCR.ts          # hOCRエクスポート（単一 / バッチ）
 │   │   └── dewarp.ts              # 湾曲補正（大津二値化 + ストリップ曲率計測 + バイリニア補間）
-│   ├── types/ai.ts                # AI関連の型定義
+│   ├── types/
+│   │   ├── ai.ts                  # AI関連の型定義
+│   │   └── model-config.ts        # OCRモデル構成の型定義（認識言語・数式認識）
 │   └── ...                   # OCR処理、hooks、utils等
 ├── docs/
 │   └── NDLOCR-Lite-Web-AI-開発計画書.md

@@ -83,6 +83,8 @@ Cross-Origin-Embedder-Policy: require-corp
 |------|------|
 | フレームワーク | Vite + React 19 + TypeScript |
 | OCRランタイム | onnxruntime-web 1.20.0（WASM CPUバックエンド） |
+| 日本語認識 | NDL PARSeq × 3モデル（カスケード方式） |
+| 欧米諸語認識 | OnnxTR PARSeq multilingual（12言語、単一モデル） |
 | PDF処理 | pdfjs-dist 4.9.0 |
 | OCR処理 | Web Worker（UIをブロックしない非同期処理） |
 | モデルキャッシュ | IndexedDB |

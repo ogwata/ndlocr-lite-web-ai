@@ -11,7 +11,8 @@
 - **複数AIプロバイダ対応** — Anthropic (Claude) / OpenAI (GPT) / Google (Gemini) / Groq / カスタムエンドポイント / MCP Server
 - **並列表示UI** — 元画像とOCR結果テキストを左右に配置し、対照しやすいレイアウト（リサイズ可能）
 - **高精度レイアウト認識** — DEIMv2モデルによりテキスト行の矩形領域を自動検出
-- **カスケード文字認識** — 行の文字数に応じて3種類のPARSeqモデルを使い分け、精度を最適化
+- **カスケード文字認識** — 行の文字数に応じて3種類のPARSeqモデルを使い分け、精度を最適化（日本語モード）
+- **欧米諸語OCR** — 英語・ドイツ語・フランス語・スペイン語・ポルトガル語・イタリア語・オランダ語・チェコ語・ポーランド語・デンマーク語・ノルウェー語・フィンランド語に対応（OnnxTR PARSeq multilingual）。設定画面で認識言語を切替
 - **PDF・複数形式対応** — JPG / PNG / TIFF / HEIC / PDF（複数ページ対応）
 - **バッチ処理** — 複数の画像ファイルやフォルダをまとめて処理
 - **結果のキャッシュ** — IndexedDBにモデルと処理結果（最新100件）を保存し、再利用可能
@@ -87,6 +88,8 @@
 |------|------|
 | フレームワーク | Vite + React 19 + TypeScript |
 | OCRランタイム | onnxruntime-web 1.20.0（WASM CPUバックエンド） |
+| 日本語認識 | NDL PARSeq × 3モデル（カスケード方式） |
+| 欧米諸語認識 | OnnxTR PARSeq multilingual（12言語、単一モデル） |
 | PDF処理 | pdfjs-dist 4.9.0 |
 | OCR処理 | Web Worker（UIをブロックしない非同期処理） |
 | AI校正 | Direct API（Anthropic/OpenAI/Google/Groq）/ MCP Server |
@@ -194,6 +197,9 @@ deluxeリポジトリからの機能取り込み:
 - perf: Viteチャンク分割改善 — react-vendor/tiffの分離でキャッシュ効率向上
 - perf: React.lazyによる遅延読み込み — HistoryPanel/SettingsModal/ImagePreprocessPanel
 - refactor: UI言語を日英2言語に整理（OCR非対応の中国語・韓国語UIを削除）
+- feat: 欧米諸語OCR対応（OnnxTR PARSeq multilingual、12言語）
+- feat: 設定画面にOCRモデルタブ追加（認識言語・数式認識の選択UI）
+- feat: アップロード画面に現在のモデル構成を表示
 
 ### v0.4.3（2026-03-23）
 
