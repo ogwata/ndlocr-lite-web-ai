@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { clearModels } from '../../utils/db'
 import type { AISettings, AIProvider, AIConnectionMode } from '../../types/ai'
-import { DEFAULT_MODELS, DEFAULT_AI_SETTINGS } from '../../types/ai'
+import { DEFAULT_MODELS, DEFAULT_AI_SETTINGS, DEFAULT_PROOFREAD_PROMPT_JA, DEFAULT_PROOFREAD_PROMPT_EUROPEAN } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import type { Language } from '../../i18n'
 import type { ModelConfig, RecognitionLanguage } from '../../types/model-config'
@@ -265,7 +265,11 @@ export function SettingsModal({
                 <button
                   className="btn btn-secondary"
                   style={{ marginTop: '0.5rem' }}
-                  onClick={() => onUpdateAISettings({ customPrompt: DEFAULT_AI_SETTINGS.customPrompt })}
+                  onClick={() => onUpdateAISettings({
+                    customPrompt: modelConfig.language === 'european'
+                      ? DEFAULT_PROOFREAD_PROMPT_EUROPEAN
+                      : DEFAULT_PROOFREAD_PROMPT_JA
+                  })}
                 >
                   {lang === 'ja' ? 'デフォルトに戻す' : 'Reset to Default'}
                 </button>
@@ -367,6 +371,19 @@ export function SettingsModal({
                   onClick={() => {
                     saveModelConfig(pendingModelConfig)
                     onUpdateModelConfig(pendingModelConfig)
+                    // 言語変更時にデフォルトプロンプトを切り替え
+                    if (pendingModelConfig.language !== modelConfig.language) {
+                      const newPrompt = pendingModelConfig.language === 'european'
+                        ? DEFAULT_PROOFREAD_PROMPT_EUROPEAN
+                        : DEFAULT_PROOFREAD_PROMPT_JA
+                      // 現在のプロンプトがデフォルト（日本語or欧米）なら自動切替
+                      const currentDefault = modelConfig.language === 'european'
+                        ? DEFAULT_PROOFREAD_PROMPT_EUROPEAN
+                        : DEFAULT_PROOFREAD_PROMPT_JA
+                      if (aiSettings.customPrompt === currentDefault || aiSettings.customPrompt === DEFAULT_AI_SETTINGS.customPrompt) {
+                        onUpdateAISettings({ customPrompt: newPrompt })
+                      }
+                    }
                     window.location.reload()
                   }}
                 >
