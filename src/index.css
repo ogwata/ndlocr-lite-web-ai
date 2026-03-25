@@ -1149,6 +1149,58 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   line-height: 1.5;
 }
 
+/* OCR Model settings */
+.settings-model-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.settings-model-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.settings-model-option:hover {
+  background: var(--color-bg-secondary);
+}
+.settings-model-option input[type="radio"],
+.settings-model-option input[type="checkbox"] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+.settings-model-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.settings-model-option-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settings-model-option-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.settings-model-option-size {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+.settings-model-option-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
 /* Settings tabs */
 .settings-tabs {
   display: flex;

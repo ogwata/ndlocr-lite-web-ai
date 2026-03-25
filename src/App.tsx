@@ -19,6 +19,8 @@ import { TextEditor } from './components/editor/TextEditor'
 const ImagePreprocessPanel = lazy(() => import('./components/viewer/ImagePreprocessPanel').then(m => ({ default: m.ImagePreprocessPanel })))
 const HistoryPanel = lazy(() => import('./components/results/HistoryPanel').then(m => ({ default: m.HistoryPanel })))
 const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
+import { loadModelConfig } from './types/model-config'
+import type { ModelConfig } from './types/model-config'
 import { imageDataToDataUrl } from './utils/imageLoader'
 import './App.css'
 
@@ -57,6 +59,7 @@ export default function App() {
   } = useAISettings()
 
   const { theme, toggleTheme } = useTheme()
+  const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig)
 
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
@@ -720,6 +723,8 @@ export default function App() {
             onSwitchProvider={switchProvider}
             connectionStatus={aiConnectionStatus}
             onTestConnection={testAndConnect}
+            modelConfig={modelConfig}
+            onUpdateModelConfig={setModelConfig}
           />
         </Suspense>
       )}

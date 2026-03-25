@@ -4,6 +4,8 @@ import type { AISettings, AIProvider, AIConnectionMode } from '../../types/ai'
 import { DEFAULT_MODELS, DEFAULT_AI_SETTINGS } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import type { Language } from '../../i18n'
+import type { ModelConfig, RecognitionLanguage } from '../../types/model-config'
+import { LANGUAGE_LABELS as MODEL_LANG_LABELS, LANGUAGE_DESCRIPTIONS, DOWNLOAD_SIZES, MATH_DOWNLOAD_SIZE, saveModelConfig } from '../../types/model-config'
 
 interface SettingsModalProps {
   onClose: () => void
@@ -13,6 +15,8 @@ interface SettingsModalProps {
   onSwitchProvider: (provider: AIProvider) => Promise<void>
   connectionStatus: AIConnectionStatus
   onTestConnection: () => Promise<boolean>
+  modelConfig: ModelConfig
+  onUpdateModelConfig: (config: ModelConfig) => void
 }
 
 const PROVIDER_LABELS: Record<AIProvider, string> = {
@@ -31,10 +35,13 @@ export function SettingsModal({
   onSwitchProvider,
   connectionStatus,
   onTestConnection,
+  modelConfig,
+  onUpdateModelConfig,
 }: SettingsModalProps) {
   const [clearing, setClearing] = useState(false)
   const [cleared, setCleared] = useState(false)
-  const [activeTab, setActiveTab] = useState<'ai' | 'cache'>('ai')
+  const [activeTab, setActiveTab] = useState<'ai' | 'ocr-model' | 'cache'>('ai')
+  const [pendingModelConfig, setPendingModelConfig] = useState<ModelConfig>(modelConfig)
   const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null)
 
   const handleClearModels = async () => {
@@ -100,6 +107,12 @@ export function SettingsModal({
             onClick={() => setActiveTab('ai')}
           >
             {lang === 'ja' ? 'AI接続' : 'AI Connection'}
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'ocr-model' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ocr-model')}
+          >
+            {lang === 'ja' ? 'OCRモデル' : 'OCR Model'}
           </button>
           <button
             className={`settings-tab ${activeTab === 'cache' ? 'active' : ''}`}
@@ -286,6 +299,81 @@ export function SettingsModal({
                 </div>
               </section>
             </>
+          )}
+
+          {/* ===== OCRモデルタブ ===== */}
+          {activeTab === 'ocr-model' && (
+            <section className="settings-section">
+              <h3>{lang === 'ja' ? '認識言語' : 'Recognition Language'}</h3>
+              <div className="settings-model-options">
+                {(['ja', 'european'] as RecognitionLanguage[]).map((langKey) => (
+                  <label key={langKey} className="settings-model-option">
+                    <input
+                      type="radio"
+                      name="recognition-language"
+                      value={langKey}
+                      checked={pendingModelConfig.language === langKey}
+                      onChange={() => setPendingModelConfig(prev => ({ ...prev, language: langKey }))}
+                    />
+                    <div className="settings-model-option-content">
+                      <div className="settings-model-option-header">
+                        <span className="settings-model-option-label">
+                          {MODEL_LANG_LABELS[lang]?.[langKey] ?? MODEL_LANG_LABELS.en[langKey]}
+                        </span>
+                        <span className="settings-model-option-size">{DOWNLOAD_SIZES[langKey]}</span>
+                      </div>
+                      <span className="settings-model-option-desc">
+                        {LANGUAGE_DESCRIPTIONS[lang]?.[langKey] ?? LANGUAGE_DESCRIPTIONS.en[langKey]}
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <h3 style={{ marginTop: '1.5rem' }}>
+                {lang === 'ja' ? '数式認識（オプション）' : 'Math Recognition (optional)'}
+              </h3>
+              <label className="settings-model-option">
+                <input
+                  type="checkbox"
+                  checked={pendingModelConfig.mathEnabled}
+                  onChange={(e) => setPendingModelConfig(prev => ({ ...prev, mathEnabled: e.target.checked }))}
+                />
+                <div className="settings-model-option-content">
+                  <div className="settings-model-option-header">
+                    <span className="settings-model-option-label">
+                      {lang === 'ja' ? '数式認識を有効にする' : 'Enable math recognition'}
+                    </span>
+                    <span className="settings-model-option-size">+{MATH_DOWNLOAD_SIZE}</span>
+                  </div>
+                  <span className="settings-model-option-desc">
+                    {lang === 'ja'
+                      ? '数式画像をLaTeX形式で出力（MathJaxで表示）'
+                      : 'Output math formulas as LaTeX (rendered with MathJax)'}
+                  </span>
+                </div>
+              </label>
+
+              <p className="settings-description" style={{ marginTop: '1rem' }}>
+                {lang === 'ja'
+                  ? '変更を適用するにはリロードが必要です。以前のモデルはキャッシュに残ります。'
+                  : 'A reload is required to apply changes. Previous models remain cached.'}
+              </p>
+
+              {(pendingModelConfig.language !== modelConfig.language || pendingModelConfig.mathEnabled !== modelConfig.mathEnabled) && (
+                <button
+                  className="btn btn-primary"
+                  style={{ marginTop: '0.5rem' }}
+                  onClick={() => {
+                    saveModelConfig(pendingModelConfig)
+                    onUpdateModelConfig(pendingModelConfig)
+                    window.location.reload()
+                  }}
+                >
+                  {lang === 'ja' ? '適用してリロード' : 'Apply & Reload'}
+                </button>
+              )}
+            </section>
           )}
 
           {/* ===== キャッシュタブ ===== */}
