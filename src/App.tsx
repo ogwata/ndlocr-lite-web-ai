@@ -19,8 +19,9 @@ import { TextEditor } from './components/editor/TextEditor'
 const ImagePreprocessPanel = lazy(() => import('./components/viewer/ImagePreprocessPanel').then(m => ({ default: m.ImagePreprocessPanel })))
 const HistoryPanel = lazy(() => import('./components/results/HistoryPanel').then(m => ({ default: m.HistoryPanel })))
 const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
-import { loadModelConfig, LANGUAGE_LABELS as MODEL_LANG_LABELS } from './types/model-config'
-import type { ModelConfig } from './types/model-config'
+import { loadModelConfig, loadDocumentLanguage, saveDocumentLanguage, getRecognitionLanguage, DOCUMENT_LANGUAGE_OPTIONS, DOCUMENT_LANGUAGE_NAMES } from './types/model-config'
+import type { ModelConfig, DocumentLanguage } from './types/model-config'
+import { buildProofreadPrompt } from './types/ai'
 import { imageDataToDataUrl } from './utils/imageLoader'
 import './App.css'
 
@@ -60,6 +61,20 @@ export default function App() {
 
   const { theme, toggleTheme } = useTheme()
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig)
+  const [documentLanguage, setDocumentLanguage] = useState<DocumentLanguage>(loadDocumentLanguage)
+
+  const handleDocumentLanguageChange = useCallback((lang: DocumentLanguage) => {
+    setDocumentLanguage(lang)
+    saveDocumentLanguage(lang)
+    // 言語変更でOCRモデルが変わる場合（ja↔european）、Worker再初期化が必要
+    // → リロードで対応
+    const currentRecLang = getRecognitionLanguage(documentLanguage)
+    const newRecLang = getRecognitionLanguage(lang)
+    if (currentRecLang !== newRecLang) {
+      // モデル構成を更新してリロード
+      window.location.reload()
+    }
+  }, [documentLanguage])
 
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
@@ -509,15 +524,12 @@ export default function App() {
             </div>
             <div className="upload-model-info">
               <span>
-                {lang === 'ja' ? 'OCRモデル: ' : 'OCR model: '}
-                {MODEL_LANG_LABELS[lang]?.[modelConfig.language] ?? MODEL_LANG_LABELS.en[modelConfig.language]}
+                {lang === 'ja' ? '文書の言語: ' : 'Document language: '}
+                {DOCUMENT_LANGUAGE_OPTIONS.find(o => o.code === documentLanguage)?.label ?? documentLanguage}
               </span>
               {modelConfig.mathEnabled && (
                 <span>{lang === 'ja' ? ' + 数式' : ' + Math'}</span>
               )}
-              <span className="upload-model-info-hint">
-                {lang === 'ja' ? '（設定で変更可能）' : '(changeable in Settings)'}
-              </span>
             </div>
           </section>
         )}
@@ -555,6 +567,16 @@ export default function App() {
 
               <div className="pending-viewer">
                 <div className="pending-viewer-buttons">
+                  <select
+                    className="select-doc-lang"
+                    value={documentLanguage}
+                    onChange={(e) => handleDocumentLanguageChange(e.target.value as DocumentLanguage)}
+                    title={lang === 'ja' ? '文書の言語' : 'Document language'}
+                  >
+                    {DOCUMENT_LANGUAGE_OPTIONS.map(({ code, label }) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
                   <button className="btn btn-primary" onClick={() => setIsReadyToProcess(true)}>
                     {selectedRegion
                       ? (lang === 'ja' ? '選択領域のOCRを開始' : 'OCR Selected Region')
@@ -756,7 +778,7 @@ export default function App() {
                     selectedBlock={selectedBlock}
                     selectedPageBlockText={selectedPageBlockText}
                     lang={lang}
-                    aiConnector={getConnector()}
+                    aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
                     aiConnectionStatus={aiConnectionStatus}
                     imageDataUrl={currentResult?.imageDataUrl}
                   />

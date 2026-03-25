@@ -845,8 +845,18 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 
 .pending-viewer-buttons {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+.select-doc-lang {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
 /* ===== RESULT PANEL ===== */

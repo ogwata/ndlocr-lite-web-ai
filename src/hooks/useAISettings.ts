@@ -128,15 +128,18 @@ export function useAISettings() {
     }
   }, [settings])
 
-  /** 現在の設定でコネクタを取得（接続テストなし） */
-  const getConnector = useCallback((): AIConnector | null => {
-    if (connector) return connector
-    // 未接続でもコネクタを生成して返す（proofread時に使う）
+  /** 現在の設定でコネクタを取得（接続テストなし）
+   *  @param promptOverride 文書言語が埋め込まれたプロンプト（省略時はsettings.customPrompt）
+   */
+  const getConnector = useCallback((promptOverride?: string): AIConnector | null => {
+    // promptOverrideがある場合は新規生成（文書言語ごとに異なるため）
+    const prompt = promptOverride ?? settings.customPrompt
+    if (!promptOverride && connector) return connector
     if (settings.mode === 'direct' && settings.directApi.apiKey) {
-      return createDirectApiConnector(settings.directApi, settings.customPrompt)
+      return createDirectApiConnector(settings.directApi, prompt)
     }
     if (settings.mode === 'mcp' && settings.mcp.serverUrl) {
-      return createMCPConnector(settings.mcp, settings.customPrompt)
+      return createMCPConnector(settings.mcp, prompt)
     }
     return null
   }, [connector, settings])

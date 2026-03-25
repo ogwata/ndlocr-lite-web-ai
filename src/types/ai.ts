@@ -61,8 +61,8 @@ export const PROVIDER_ENDPOINTS: Record<AIProvider, string> = {
   custom: '',
 }
 
-/** デフォルト校正プロンプト（言語自動判定） */
-export const DEFAULT_PROOFREAD_PROMPT = `You are an expert OCR proofreader. First, identify the language of the document from the original image. Then compare the OCR text with the image and fix recognition errors according to the rules for that language.
+/** デフォルト校正プロンプト（文書言語をプレースホルダで埋め込み） */
+export const DEFAULT_PROOFREAD_PROMPT = `You are an expert OCR proofreader for {documentLanguage} text. Compare the following OCR text with the original image and fix recognition errors.
 
 Important instructions:
 - Fix only obvious OCR misrecognitions. Do not rephrase or modernize the text.
@@ -72,6 +72,11 @@ Important instructions:
 - Fix misrecognized punctuation and symbols.
 - Preserve line breaks as they appear in the OCR output.
 - Output only the corrected text. No explanations.`
+
+/** プロンプトに文書言語を埋め込む */
+export function buildProofreadPrompt(template: string, documentLanguageName: string): string {
+  return template.replace(/\{documentLanguage\}/g, documentLanguageName)
+}
 
 /** デフォルト設定 */
 export const DEFAULT_AI_SETTINGS: AISettings = {

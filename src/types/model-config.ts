@@ -1,76 +1,101 @@
 /**
- * OCRモデル構成の型定義
+ * OCRモデル構成・文書言語の型定義
  *
- * ユーザーが設定画面で選択する認識言語・数式認識の構成を定義する。
- * 設定はlocalStorageに永続化し、Worker初期化時にモデルの選択に使用する。
+ * 文書言語（DocumentLanguage）はユーザーがOCR実行前に選択する。
+ * 内部的にOCRモデル（RecognitionLanguage: ja/european）を自動選択する。
  */
 
-/** 認識言語モード */
+/** OCRモデルの種別（内部用） */
 export type RecognitionLanguage = 'ja' | 'european'
 
-/** モデル構成 */
+/** ユーザーが選択する文書言語 */
+export type DocumentLanguage =
+  | 'ja' | 'en' | 'de' | 'fr' | 'es' | 'pt'
+  | 'it' | 'nl' | 'cs' | 'pl' | 'da' | 'no' | 'fi'
+
+/** 文書言語 → OCRモデル種別のマッピング */
+export function getRecognitionLanguage(docLang: DocumentLanguage): RecognitionLanguage {
+  return docLang === 'ja' ? 'ja' : 'european'
+}
+
+/** 文書言語の表示ラベル（各言語のネイティブ表記） */
+export const DOCUMENT_LANGUAGE_OPTIONS: Array<{ code: DocumentLanguage; label: string }> = [
+  { code: 'ja', label: '日本語' },
+  { code: 'en', label: 'English' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'fr', label: 'Français' },
+  { code: 'es', label: 'Español' },
+  { code: 'pt', label: 'Português' },
+  { code: 'it', label: 'Italiano' },
+  { code: 'nl', label: 'Nederlands' },
+  { code: 'cs', label: 'Čeština' },
+  { code: 'pl', label: 'Polski' },
+  { code: 'da', label: 'Dansk' },
+  { code: 'no', label: 'Norsk' },
+  { code: 'fi', label: 'Suomi' },
+]
+
+/** 文書言語の英語名（AI校正プロンプト用） */
+export const DOCUMENT_LANGUAGE_NAMES: Record<DocumentLanguage, string> = {
+  ja: 'Japanese',
+  en: 'English',
+  de: 'German',
+  fr: 'French',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  it: 'Italian',
+  nl: 'Dutch',
+  cs: 'Czech',
+  pl: 'Polish',
+  da: 'Danish',
+  no: 'Norwegian',
+  fi: 'Finnish',
+}
+
+/** モデル構成（永続化用） */
 export interface ModelConfig {
-  /** 認識言語 */
-  language: RecognitionLanguage
   /** 数式認識を有効にするか */
   mathEnabled: boolean
 }
 
 /** デフォルトのモデル構成 */
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
-  language: 'ja',
   mathEnabled: false,
 }
 
 /** localStorage キー */
 export const MODEL_CONFIG_STORAGE_KEY = 'ndlocrlite_model_config'
+export const DOC_LANG_STORAGE_KEY = 'ndlocrlite_doc_lang'
 
-/** 保存 */
+/** モデル構成の保存 */
 export function saveModelConfig(config: ModelConfig): void {
   localStorage.setItem(MODEL_CONFIG_STORAGE_KEY, JSON.stringify(config))
 }
 
-/** 読み込み */
+/** モデル構成の読み込み */
 export function loadModelConfig(): ModelConfig {
   try {
     const stored = localStorage.getItem(MODEL_CONFIG_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
-      if (parsed.language && (parsed.language === 'ja' || parsed.language === 'european')) {
-        return {
-          language: parsed.language,
-          mathEnabled: !!parsed.mathEnabled,
-        }
-      }
+      return { mathEnabled: !!parsed.mathEnabled }
     }
-  } catch {
-    // ignore parse errors
-  }
+  } catch { /* ignore */ }
   return DEFAULT_MODEL_CONFIG
 }
 
-/** 言語モードの表示ラベル */
-export const LANGUAGE_LABELS: Record<string, Record<RecognitionLanguage, string>> = {
-  ja: {
-    ja: '日本語',
-    european: '欧米諸語',
-  },
-  en: {
-    ja: 'Japanese',
-    european: 'European Languages',
-  },
+/** 文書言語の保存 */
+export function saveDocumentLanguage(lang: DocumentLanguage): void {
+  localStorage.setItem(DOC_LANG_STORAGE_KEY, lang)
 }
 
-/** 言語モードの説明文 */
-export const LANGUAGE_DESCRIPTIONS: Record<string, Record<RecognitionLanguage, string>> = {
-  ja: {
-    ja: '歴史的文書・縦書き対応',
-    european: '英語・ドイツ語・フランス語・スペイン語・ポルトガル語・イタリア語・オランダ語・チェコ語・ポーランド語・デンマーク語・ノルウェー語・フィンランド語',
-  },
-  en: {
-    ja: 'Historical documents, vertical text',
-    european: 'English, German, French, Spanish, Portuguese, Italian, Dutch, Czech, Polish, Danish, Norwegian, Finnish',
-  },
+/** 文書言語の読み込み */
+export function loadDocumentLanguage(): DocumentLanguage {
+  const stored = localStorage.getItem(DOC_LANG_STORAGE_KEY)
+  if (stored && DOCUMENT_LANGUAGE_OPTIONS.some(o => o.code === stored)) {
+    return stored as DocumentLanguage
+  }
+  return 'ja'
 }
 
 /** ダウンロードサイズ見積もり */

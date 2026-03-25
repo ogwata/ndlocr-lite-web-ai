@@ -4,8 +4,8 @@ import type { AISettings, AIProvider, AIConnectionMode } from '../../types/ai'
 import { DEFAULT_MODELS, DEFAULT_PROOFREAD_PROMPT } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import type { Language } from '../../i18n'
-import type { ModelConfig, RecognitionLanguage } from '../../types/model-config'
-import { LANGUAGE_LABELS as MODEL_LANG_LABELS, LANGUAGE_DESCRIPTIONS, DOWNLOAD_SIZES, MATH_DOWNLOAD_SIZE, saveModelConfig } from '../../types/model-config'
+import type { ModelConfig } from '../../types/model-config'
+import { MATH_DOWNLOAD_SIZE, saveModelConfig } from '../../types/model-config'
 
 interface SettingsModalProps {
   onClose: () => void
@@ -304,35 +304,7 @@ export function SettingsModal({
           {/* ===== OCRモデルタブ ===== */}
           {activeTab === 'ocr-model' && (
             <section className="settings-section">
-              <h3>{lang === 'ja' ? '認識言語' : 'Recognition Language'}</h3>
-              <div className="settings-model-options">
-                {(['ja', 'european'] as RecognitionLanguage[]).map((langKey) => (
-                  <label key={langKey} className="settings-model-option">
-                    <input
-                      type="radio"
-                      name="recognition-language"
-                      value={langKey}
-                      checked={pendingModelConfig.language === langKey}
-                      onChange={() => setPendingModelConfig(prev => ({ ...prev, language: langKey }))}
-                    />
-                    <div className="settings-model-option-content">
-                      <div className="settings-model-option-header">
-                        <span className="settings-model-option-label">
-                          {MODEL_LANG_LABELS[lang]?.[langKey] ?? MODEL_LANG_LABELS.en[langKey]}
-                        </span>
-                        <span className="settings-model-option-size">{DOWNLOAD_SIZES[langKey]}</span>
-                      </div>
-                      <span className="settings-model-option-desc">
-                        {LANGUAGE_DESCRIPTIONS[lang]?.[langKey] ?? LANGUAGE_DESCRIPTIONS.en[langKey]}
-                      </span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              <h3 style={{ marginTop: '1.5rem' }}>
-                {lang === 'ja' ? '数式認識（オプション）' : 'Math Recognition (optional)'}
-              </h3>
+              <h3>{lang === 'ja' ? '数式認識（オプション）' : 'Math Recognition (optional)'}</h3>
               <label className="settings-model-option">
                 <input
                   type="checkbox"
@@ -356,11 +328,11 @@ export function SettingsModal({
 
               <p className="settings-description" style={{ marginTop: '1rem' }}>
                 {lang === 'ja'
-                  ? '変更を適用するにはリロードが必要です。以前のモデルはキャッシュに残ります。'
-                  : 'A reload is required to apply changes. Previous models remain cached.'}
+                  ? '文書の言語はOCR開始ボタンの横で選択できます。言語に応じたOCRモデルが自動的にダウンロードされます。'
+                  : 'Document language can be selected next to the OCR start button. The appropriate model is downloaded automatically.'}
               </p>
 
-              {(pendingModelConfig.language !== modelConfig.language || pendingModelConfig.mathEnabled !== modelConfig.mathEnabled) && (
+              {pendingModelConfig.mathEnabled !== modelConfig.mathEnabled && (
                 <button
                   className="btn btn-primary"
                   style={{ marginTop: '0.5rem' }}
