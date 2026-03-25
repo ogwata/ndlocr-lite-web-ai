@@ -85,6 +85,8 @@ Cross-Origin-Embedder-Policy: require-corp
 | OCRランタイム | onnxruntime-web 1.20.0（WASM CPUバックエンド） |
 | 日本語認識 | NDL PARSeq × 3モデル（カスケード方式） |
 | 欧米諸語認識 | OnnxTR PARSeq multilingual（12言語、単一モデル） |
+| 数式認識 | pix2text-mfr（DeiT encoder + TrOCR decoder、LaTeX出力） |
+| 数式表示 | MathJax 3（CDN） |
 | PDF処理 | pdfjs-dist 4.9.0 |
 | OCR処理 | Web Worker（UIをブロックしない非同期処理） |
 | モデルキャッシュ | IndexedDB |

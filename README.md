@@ -24,6 +24,7 @@
 - **検索・置換** — テキストエリア内の検索・置換機能（Ctrl+F）
 - **日英UI** — 日本語・英語の2言語対応（OCR対応言語の追加に合わせて拡充予定）
 - **TEI/hOCRエクスポート** — OCR結果をTEI P5 XML（人文学研究向け）やhOCR形式でダウンロード可能（複数ページの一括エクスポートにも対応）
+- **数式認識** — 領域選択した数式画像をLaTeX形式で出力、MathJaxでプレビュー表示（pix2text-mfr）
 - **undo/redo** — テキスト編集のundo/redo（Ctrl+Z / Ctrl+Shift+Z）
 - **バッチ処理の中断** — 複数ファイルのOCR処理を途中で停止可能（処理済みの結果は保持）
 
@@ -90,6 +91,8 @@
 | OCRランタイム | onnxruntime-web 1.20.0（WASM CPUバックエンド） |
 | 日本語認識 | NDL PARSeq × 3モデル（カスケード方式） |
 | 欧米諸語認識 | OnnxTR PARSeq multilingual（12言語、単一モデル） |
+| 数式認識 | pix2text-mfr（DeiT encoder + TrOCR decoder、LaTeX出力） |
+| 数式表示 | MathJax 3（CDN） |
 | PDF処理 | pdfjs-dist 4.9.0 |
 | OCR処理 | Web Worker（UIをブロックしない非同期処理） |
 | AI校正 | Direct API（Anthropic/OpenAI/Google/Groq）/ MCP Server |
@@ -200,6 +203,7 @@ deluxeリポジトリからの機能取り込み:
 - feat: 欧米諸語OCR対応（OnnxTR PARSeq multilingual、12言語）
 - feat: 設定画面にOCRモデルタブ追加（認識言語・数式認識の選択UI）
 - feat: アップロード画面に現在のモデル構成を表示
+- feat: 数式認識（pix2text-mfr、領域選択→LaTeX出力→MathJaxプレビュー）
 
 ### v0.4.3（2026-03-23）
 
