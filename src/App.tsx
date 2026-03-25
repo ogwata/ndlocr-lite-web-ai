@@ -118,6 +118,20 @@ export default function App() {
     setPreprocessedUrls(prev => ({ ...prev, [index]: dataUrl }))
   }, [])
 
+  const handlePreprocessReset = useCallback((index: number) => {
+    setPreprocessedUrls(prev => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }, [])
+
+  // pending 状態での ImageViewer 表示用（全解像度 DataUrl）
+  const pendingDataUrls = useMemo(
+    () => processedImages.map((img) => imageDataToDataUrl(img.imageData)),
+    [processedImages]
+  )
+
   const handlePreprocessAll = useCallback(async (opts: import('./components/viewer/ImagePreprocessPanel').PreprocessOptions) => {
     const { applyPreprocess } = await import('./components/viewer/ImagePreprocessPanel')
     const results: Record<number, string> = {}
@@ -133,20 +147,6 @@ export default function App() {
     }
     setPreprocessedUrls(prev => ({ ...prev, ...results }))
   }, [pendingDataUrls])
-
-  const handlePreprocessReset = useCallback((index: number) => {
-    setPreprocessedUrls(prev => {
-      const next = { ...prev }
-      delete next[index]
-      return next
-    })
-  }, [])
-
-  // pending 状態での ImageViewer 表示用（全解像度 DataUrl）
-  const pendingDataUrls = useMemo(
-    () => processedImages.map((img) => imageDataToDataUrl(img.imageData)),
-    [processedImages]
-  )
 
   // processedImages が差し替わったらインデックスをリセット
   useEffect(() => { setPendingImageIndex(0); setSelectedIndices(new Set()) }, [processedImages])

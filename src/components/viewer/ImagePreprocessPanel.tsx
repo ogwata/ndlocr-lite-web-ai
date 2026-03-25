@@ -47,6 +47,7 @@ type TranslationStrings = {
   invertColors: string
   deskewAuto: string
   autoCrop: string
+  dewarp: string
   splitCenter: string
   splitAuto: string
   rotation: string
@@ -69,6 +70,7 @@ const t: Record<Language, TranslationStrings> = {
     invertColors: '反転',
     deskewAuto: '自動傾き補正',
     autoCrop: '自動裁ち落とし',
+    dewarp: '湾曲補正',
     splitCenter: 'センター分割',
     splitAuto: '自動分割',
     rotation: '回転',
@@ -89,6 +91,7 @@ const t: Record<Language, TranslationStrings> = {
     invertColors: 'Invert Colors',
     deskewAuto: 'Deskew (auto)',
     autoCrop: 'Auto Crop',
+    dewarp: 'Dewarp',
     splitCenter: 'Split Center',
     splitAuto: 'Split Auto',
     rotation: 'Rotation',
@@ -109,6 +112,7 @@ const t: Record<Language, TranslationStrings> = {
     invertColors: '反转颜色',
     deskewAuto: '自动去斜',
     autoCrop: '自动裁剪',
+    dewarp: '弯曲校正',
     splitCenter: '中心分割',
     splitAuto: '自动分割',
     rotation: '旋转',
@@ -129,6 +133,7 @@ const t: Record<Language, TranslationStrings> = {
     invertColors: '反轉顏色',
     deskewAuto: '自動去斜',
     autoCrop: '自動裁剪',
+    dewarp: '彎曲校正',
     splitCenter: '中心分割',
     splitAuto: '自動分割',
     rotation: '旋轉',
@@ -149,6 +154,7 @@ const t: Record<Language, TranslationStrings> = {
     invertColors: '색 반전',
     deskewAuto: '자동 기울기 보정',
     autoCrop: '자동 자르기',
+    dewarp: '곡면 보정',
     splitCenter: '중심 분할',
     splitAuto: '자동 분할',
     rotation: '회전',
@@ -252,6 +258,19 @@ export function ImagePreprocessPanel({
       onProcessed(result)
     } catch (err) {
       console.error('Deskew error:', err)
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [imageDataUrl, onProcessed])
+
+  const handleDewarp = useCallback(async () => {
+    setIsProcessing(true)
+    try {
+      const { dewarpImage } = await import('../../utils/dewarp')
+      const result = await dewarpImage(imageDataUrl)
+      onProcessed(result)
+    } catch (err) {
+      console.error('Dewarp error:', err)
     } finally {
       setIsProcessing(false)
     }
@@ -383,6 +402,15 @@ export function ImagePreprocessPanel({
               type="button"
             >
               {isProcessing ? strings.processing : strings.deskewAuto}
+            </button>
+            <button
+              className="preprocess-btn preprocess-btn-secondary"
+              onClick={handleDewarp}
+              disabled={isProcessing}
+              type="button"
+              title={lang === 'ja' ? '綴じ部分の湾曲を補正' : 'Flatten curved page spread'}
+            >
+              {isProcessing ? strings.processing : strings.dewarp}
             </button>
             <button
               className="preprocess-btn preprocess-btn-secondary"
