@@ -186,28 +186,34 @@ export class MathRecognizer {
   }
 
   /**
-   * ByteLevel BPE のバイト→Unicode変換テーブルを構築
-   * GPT-2/RoBERTa系トークナイザーで使用される標準マッピング
+   * GPT-2/RoBERTa ByteLevel BPE の Unicode文字→バイト値 変換テーブル
+   * Python: openai/gpt-2 の bytes_to_unicode() の逆マッピング
    */
-  private static buildBytesToUnicode(): Map<string, number> {
-    // Unicode codepoint → byte value のマッピング
-    const mapping = new Map<string, number>()
+  private static buildUnicodeToBytes(): Map<string, number> {
+    // Step 1: 「そのまま」マッピングされるバイト値を列挙
+    // ! (33) ~ ~ (126), ¡ (161) ~ ¬ (172), ® (174) ~ ÿ (255)
+    const bs: number[] = []
+    const cs: number[] = []
+    for (let b = 33; b <= 126; b++) { bs.push(b); cs.push(b) }
+    for (let b = 161; b <= 172; b++) { bs.push(b); cs.push(b) }
+    for (let b = 174; b <= 255; b++) { bs.push(b); cs.push(b) }
 
-    // 印刷可能ASCII文字はそのまま (! " # ... ~)
-    for (let b = 33; b <= 126; b++) mapping.set(String.fromCharCode(b), b)
-    // Latin-1 supplement の一部 (¡ ... ¬, ® ... ÿ)
-    for (let b = 161; b <= 172; b++) mapping.set(String.fromCharCode(b), b)
-    for (let b = 174; b <= 255; b++) mapping.set(String.fromCharCode(b), b)
-
-    // 残りのバイト値 (0-32, 127-160, 173) はU+0100以降にマッピング
+    // Step 2: 残りのバイト値 (0-32, 127-160, 173) を U+0100 以降にマッピング
+    const bsSet = new Set(bs)
     let n = 256
     for (let b = 0; b < 256; b++) {
-      if (!Array.from(mapping.values()).includes(b)) {
-        mapping.set(String.fromCharCode(n), b)
+      if (!bsSet.has(b)) {
+        bs.push(b)
+        cs.push(n)
         n++
       }
     }
 
+    // cs[i] の Unicode文字 → bs[i] のバイト値
+    const mapping = new Map<string, number>()
+    for (let i = 0; i < bs.length; i++) {
+      mapping.set(String.fromCharCode(cs[i]), bs[i])
+    }
     return mapping
   }
 
@@ -232,7 +238,7 @@ export class MathRecognizer {
 
     // ByteLevel BPE デコード: トークン文字列の各Unicode文字をバイトに変換し、UTF-8としてデコード
     const joined = tokens.join('')
-    const bytesToUnicode = MathRecognizer.buildBytesToUnicode()
+    const bytesToUnicode = MathRecognizer.buildUnicodeToBytes()
     const bytes: number[] = []
     for (const char of joined) {
       const byteVal = bytesToUnicode.get(char)
