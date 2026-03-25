@@ -31,8 +31,15 @@ export const MODEL_URLS_EUROPEAN: Record<string, string> = {
 }
 
 /** 言語に応じたモデルURL辞書を返す */
-export function getModelUrls(language: RecognitionLanguage = 'ja'): Record<string, string> {
-  return language === 'european' ? MODEL_URLS_EUROPEAN : MODEL_URLS_JA
+export function getModelUrls(language: RecognitionLanguage = 'ja', mathEnabled = false): Record<string, string> {
+  const base = language === 'european' ? MODEL_URLS_EUROPEAN : MODEL_URLS_JA
+  return mathEnabled ? { ...base, ...MODEL_URLS_MATH } : base
+}
+
+// 数式認識モデルURL（pix2text-mfr: DeiT encoder + TrOCR decoder）
+export const MODEL_URLS_MATH: Record<string, string> = {
+  mathEncoder: `${MODEL_BASE_URL}/mfr-encoder.onnx`,
+  mathDecoder: `${MODEL_BASE_URL}/mfr-decoder.onnx`,
 }
 
 // 後方互換: デフォルトは日本語

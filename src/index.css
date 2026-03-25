@@ -1212,6 +1212,53 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   line-height: 1.4;
 }
 
+/* Math result dialog */
+.math-result-panel {
+  max-width: 600px;
+}
+.math-result-image {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+}
+.math-result-latex {
+  margin-bottom: 1rem;
+}
+.math-result-latex label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+}
+.math-result-textarea {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  resize: vertical;
+}
+.math-result-rendered label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+}
+.math-result-preview {
+  padding: 1rem;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+  font-size: 1.1rem;
+  text-align: center;
+  overflow-x: auto;
+}
+
 /* Settings tabs */
 .settings-tabs {
   display: flex;

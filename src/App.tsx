@@ -69,6 +69,8 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isReadyToProcess, setIsReadyToProcess] = useState(false)
+  const [mathResult, setMathResult] = useState<{ latex: string; imageUrl: string } | null>(null)
+  const [isMathProcessing, setIsMathProcessing] = useState(false)
   const [pendingImageIndex, setPendingImageIndex] = useState(0)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const lastClickedIndexRef = useRef<number>(0)
@@ -330,6 +332,44 @@ export default function App() {
     runOCR()
   }, [isReadyToProcess]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 数式認識ハンドラ（領域選択 → 数式として認識）
+  const handleMathRecognize = useCallback(async () => {
+    if (!selectedRegion || !modelConfig.mathEnabled) return
+    const srcDataUrl = currentResult
+      ? currentResult.imageDataUrl
+      : pendingDataUrls[pendingImageIndex] ?? ''
+    if (!srcDataUrl) return
+
+    setIsMathProcessing(true)
+    try {
+      const { previewDataUrl, imageData } = await cropRegion(srcDataUrl, selectedRegion)
+      // 動的importで数式認識モジュールをロード
+      const { MathRecognizer } = await import('./worker/math-recognizer')
+      const { loadModel } = await import('./worker/model-loader')
+
+      const recognizer = new MathRecognizer()
+      const [encoderData, decoderData] = await Promise.all([
+        loadModel('mathEncoder', undefined, undefined),
+        loadModel('mathDecoder', undefined, undefined),
+      ])
+      // tokenizer.json を取得
+      const MODEL_BASE_URL = (import.meta.env.VITE_MODEL_BASE_URL as string | undefined) || '/models'
+      const tokenizerRes = await fetch(`${MODEL_BASE_URL}/mfr-tokenizer.json`)
+      const tokenizerJson = await tokenizerRes.text()
+
+      await recognizer.initialize(encoderData, decoderData, tokenizerJson)
+      const latex = await recognizer.recognize(imageData)
+      recognizer.dispose()
+
+      setMathResult({ latex, imageUrl: previewDataUrl })
+    } catch (err) {
+      console.error('Math recognition failed:', err)
+      setMathResult({ latex: `Error: ${(err as Error).message}`, imageUrl: '' })
+    } finally {
+      setIsMathProcessing(false)
+    }
+  }, [selectedRegion, modelConfig.mathEnabled, currentResult, pendingDataUrls, pendingImageIndex])
+
   const handleStopProcessing = useCallback(() => {
     cancelRef.current = true
   }, [])
@@ -543,6 +583,17 @@ export default function App() {
                 />
                 {selectedRegion && (
                   <div className="region-action-bar">
+                    {modelConfig.mathEnabled && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleMathRecognize}
+                        disabled={isMathProcessing}
+                      >
+                        {isMathProcessing
+                          ? (lang === 'ja' ? '数式認識中...' : 'Recognizing...')
+                          : (lang === 'ja' ? '数式として認識' : 'Recognize as Math')}
+                      </button>
+                    )}
                     <button className="btn btn-secondary btn-sm" onClick={handleClearRegion}>
                       {lang === 'ja' ? '選択解除' : 'Clear Selection'}
                     </button>
@@ -674,6 +725,17 @@ export default function App() {
                             <button className="btn btn-primary btn-sm" onClick={() => setIsReadyToProcess(true)}>
                               {lang === 'ja' ? '選択領域のOCRを開始' : 'OCR Selected Region'}
                             </button>
+                            {modelConfig.mathEnabled && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={handleMathRecognize}
+                                disabled={isMathProcessing}
+                              >
+                                {isMathProcessing
+                                  ? (lang === 'ja' ? '数式認識中...' : 'Recognizing...')
+                                  : (lang === 'ja' ? '数式として認識' : 'Recognize as Math')}
+                              </button>
+                            )}
                             <button className="btn btn-secondary btn-sm" onClick={handleClearRegion}>
                               {lang === 'ja' ? '選択解除' : 'Clear Selection'}
                             </button>
@@ -739,6 +801,55 @@ export default function App() {
             onUpdateModelConfig={setModelConfig}
           />
         </Suspense>
+      )}
+      {/* 数式認識結果ダイアログ — MathJax typeset */}
+      {mathResult && (() => {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        // MathJax re-typeset when result changes
+        setTimeout(() => {
+          const w = window as unknown as { MathJax?: { typeset?: (elems?: HTMLElement[]) => void } }
+          const el = document.getElementById('math-result-rendered')
+          if (w.MathJax?.typeset && el) w.MathJax.typeset([el])
+        }, 100)
+        return null
+      })()}
+      {mathResult && (
+        <div className="panel-overlay" onClick={() => setMathResult(null)}>
+          <div className="panel math-result-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="panel-header">
+              <h2>{lang === 'ja' ? '数式認識結果' : 'Math Recognition Result'}</h2>
+              <button className="btn-close" onClick={() => setMathResult(null)}>✕</button>
+            </div>
+            <div className="panel-body">
+              {mathResult.imageUrl && (
+                <div className="math-result-image">
+                  <img src={mathResult.imageUrl} alt="Math region" style={{ maxWidth: '100%', maxHeight: '200px' }} />
+                </div>
+              )}
+              <div className="math-result-latex">
+                <label>{lang === 'ja' ? 'LaTeX:' : 'LaTeX:'}</label>
+                <textarea
+                  className="math-result-textarea"
+                  value={mathResult.latex}
+                  readOnly
+                  rows={3}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(mathResult.latex) } catch { /* ignore */ }
+                  }}
+                >
+                  {lang === 'ja' ? 'コピー' : 'Copy'}
+                </button>
+              </div>
+              <div className="math-result-rendered" id="math-result-rendered">
+                <label>{lang === 'ja' ? 'プレビュー:' : 'Preview:'}</label>
+                <div className="math-result-preview">{`$$${mathResult.latex}$$`}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
