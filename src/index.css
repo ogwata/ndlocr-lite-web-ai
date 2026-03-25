@@ -632,6 +632,18 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 
 .result-progress-inline {
   padding: 0.5rem 0 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.result-progress-inline .progress-container {
+  flex: 1;
+}
+.btn-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
 }
 
 /* ===== RESULT CONTENT ===== */

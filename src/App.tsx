@@ -69,6 +69,7 @@ export default function App() {
   const [pendingImageIndex, setPendingImageIndex] = useState(0)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const lastClickedIndexRef = useRef<number>(0)
+  const cancelRef = useRef(false)
 
   // サイドバーのクリックハンドラ（Cmd/Ctrl+クリック、Shift+クリック対応）
   const handleSidebarClick = useCallback((index: number, e: React.MouseEvent) => {
@@ -270,8 +271,10 @@ export default function App() {
       const runCreatedAt = Date.now()
       const successItems: Array<{ result: OCRResult; thumbnailDataUrl: string }> = []
       const sessionResultsAccum: OCRResult[] = []
+      cancelRef.current = false
 
       for (let idx = 0; idx < indicesToProcess.length; idx++) {
+        if (cancelRef.current) break
         const i = indicesToProcess[idx]
         const image = processedImages[i]
         try {
@@ -284,6 +287,7 @@ export default function App() {
           console.error(`OCR failed for ${image.fileName}:`, err)
         }
       }
+      cancelRef.current = false
 
       if (successItems.length > 0) {
         const runEntry: DBRunEntry = {
@@ -306,6 +310,10 @@ export default function App() {
 
     runOCR()
   }, [isReadyToProcess]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleStopProcessing = useCallback(() => {
+    cancelRef.current = true
+  }, [])
 
   const handleClear = () => {
     if (sessionResults.length > 0) {
@@ -582,6 +590,12 @@ export default function App() {
               {isProcessing && (
                 <div className="result-progress-inline">
                   <ProgressBar jobState={jobState} lang={lang} />
+                  <button className="btn btn-secondary btn-sm btn-stop" onClick={handleStopProcessing}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="4" y="4" width="16" height="16" rx="2" />
+                    </svg>
+                    {lang === 'ja' ? '停止' : 'Stop'}
+                  </button>
                 </div>
               )}
 
