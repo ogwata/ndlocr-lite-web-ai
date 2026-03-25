@@ -8,7 +8,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - サーバーに画像を送信しない完全クライアントサイド処理
 - AI（Claude, GPT, Gemini等）によるOCR結果の校正機能を付加
 - 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割・一括適用）
-- ダークモード（OS設定追従）、多言語UI（日英中韓）、縦書き表示モード
+- ダークモード（OS設定追従）、多言語UI（日英）、縦書き表示モード
 - OCR結果のTEI P5 XML / hOCRエクスポート（単一ページ / バッチ）
 - ImageViewer表示モード（テキストオーバーレイ・信頼度ヒートマップ・読み順表示）
 - TextEditorのundo/redo（デバウンス付き編集履歴スタック）
@@ -71,9 +71,9 @@ ndlocr-lite-web-ai/
 │   │   └── ...                    # その他UIコンポーネント
 │   ├── hooks/
 │   │   ├── useAISettings.ts       # AI設定管理hook
-│   │   ├── useI18n.ts             # 多言語対応hook（日英中韓）
+│   │   ├── useI18n.ts             # 多言語対応hook（日英）
 │   │   └── useTheme.ts            # ダークモード切替hook（OS設定追従）
-│   ├── i18n/                      # 多言語リソース（ja, en, zh-CN, zh-TW, ko）
+│   ├── i18n/                      # 多言語リソース（ja, en）
 │   ├── utils/
 │   │   ├── crypto.ts              # APIキー暗号化（Web Crypto API）
 │   │   ├── imagePreprocess.ts     # 画像前処理ユーティリティ
@@ -145,7 +145,7 @@ ndlocr-lite-web-ai/
 
 **ヘッダーバー:**
 - 左: アプリアイコン + アプリ名 + バージョンバッジ
-- 右: ダークモード切替 + 言語選択（日英中韓5言語） + AI接続ステータスバッジ（connected=緑 / disconnected=灰）+ Settingsボタン
+- 右: ダークモード切替 + 言語選択（日英） + AI接続ステータスバッジ（connected=緑 / disconnected=灰）+ Settingsボタン
 
 **左パネル（ImageViewer）:**
 - 元画像の表示（Fit-to-viewで自動フィット、+/−ボタンとCtrl+ホイールでカーソル中心ズーム）
@@ -293,7 +293,7 @@ Cross-Origin-Embedder-Policy: require-corp
 - コンポーネント: React関数コンポーネント + Hooks
 - スタイル: 既存のCSSファイルの規約に従う
 - 新規コンポーネントは `src/` 配下に適切に配置する
-- 日本語コメント可（UIテキストは日英中韓5言語対応を維持）
+- 日本語コメント可（UIテキストは日英2言語対応。OCR対応言語の追加に合わせてUI言語も拡充予定）
 
 ### AI校正関連の設計方針
 
