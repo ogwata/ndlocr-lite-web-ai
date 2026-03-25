@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react'
 import type { OCRResult, TextBlock, BoundingBox, PageBlock } from './types/ocr'
 import type { DBRunEntry } from './types/db'
 import { useI18n } from './hooks/useI18n'
@@ -16,9 +16,9 @@ import { DirectoryPicker } from './components/upload/DirectoryPicker'
 import { ProgressBar } from './components/progress/ProgressBar'
 import { ImageViewer } from './components/viewer/ImageViewer'
 import { TextEditor } from './components/editor/TextEditor'
-import { ImagePreprocessPanel } from './components/viewer/ImagePreprocessPanel'
-import { HistoryPanel } from './components/results/HistoryPanel'
-import { SettingsModal } from './components/settings/SettingsModal'
+const ImagePreprocessPanel = lazy(() => import('./components/viewer/ImagePreprocessPanel').then(m => ({ default: m.ImagePreprocessPanel })))
+const HistoryPanel = lazy(() => import('./components/results/HistoryPanel').then(m => ({ default: m.HistoryPanel })))
+const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })))
 import { imageDataToDataUrl } from './utils/imageLoader'
 import './App.css'
 
@@ -484,12 +484,14 @@ export default function App() {
                         : (lang === 'ja' ? 'OCRを開始' : 'Start OCR')}
                   </button>
                 </div>
-                <ImagePreprocessPanel
-                  lang={lang}
-                  imageDataUrl={pendingDataUrls[pendingImageIndex] ?? ''}
-                  onProcessed={(url) => handlePreprocessed(pendingImageIndex, url)}
-                  onReset={() => handlePreprocessReset(pendingImageIndex)}
-                />
+                <Suspense fallback={null}>
+                  <ImagePreprocessPanel
+                    lang={lang}
+                    imageDataUrl={pendingDataUrls[pendingImageIndex] ?? ''}
+                    onProcessed={(url) => handlePreprocessed(pendingImageIndex, url)}
+                    onReset={() => handlePreprocessReset(pendingImageIndex)}
+                  />
+                </Suspense>
                 <ImageViewer
                   imageDataUrl={preprocessedUrls[pendingImageIndex] ?? pendingDataUrls[pendingImageIndex] ?? ''}
                   textBlocks={[]}
@@ -599,12 +601,14 @@ export default function App() {
                   <div className="split-image-panel">
                     {currentResult && (
                       <>
-                        <ImagePreprocessPanel
-                          lang={lang}
-                          imageDataUrl={currentResult.imageDataUrl}
-                          onProcessed={(url) => handlePreprocessed(selectedResultIndex + 10000, url)}
-                          onReset={() => handlePreprocessReset(selectedResultIndex + 10000)}
-                        />
+                        <Suspense fallback={null}>
+                          <ImagePreprocessPanel
+                            lang={lang}
+                            imageDataUrl={currentResult.imageDataUrl}
+                            onProcessed={(url) => handlePreprocessed(selectedResultIndex + 10000, url)}
+                            onReset={() => handlePreprocessReset(selectedResultIndex + 10000)}
+                          />
+                        </Suspense>
                         <ImageViewer
                           imageDataUrl={preprocessedUrls[selectedResultIndex + 10000] ?? currentResult.imageDataUrl}
                           textBlocks={currentResult.textBlocks}
@@ -664,24 +668,28 @@ export default function App() {
       <Footer lang={lang} />
 
       {showHistory && (
-        <HistoryPanel
-          runs={historyRuns}
-          onSelect={handleHistorySelect}
-          onClear={clearResults}
-          onClose={() => setShowHistory(false)}
-          lang={lang}
-        />
+        <Suspense fallback={null}>
+          <HistoryPanel
+            runs={historyRuns}
+            onSelect={handleHistorySelect}
+            onClear={clearResults}
+            onClose={() => setShowHistory(false)}
+            lang={lang}
+          />
+        </Suspense>
       )}
       {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          lang={lang}
-          aiSettings={aiSettings}
-          onUpdateAISettings={updateAISettings}
-          onSwitchProvider={switchProvider}
-          connectionStatus={aiConnectionStatus}
-          onTestConnection={testAndConnect}
-        />
+        <Suspense fallback={null}>
+          <SettingsModal
+            onClose={() => setShowSettings(false)}
+            lang={lang}
+            aiSettings={aiSettings}
+            onUpdateAISettings={updateAISettings}
+            onSwitchProvider={switchProvider}
+            connectionStatus={aiConnectionStatus}
+            onTestConnection={testAndConnect}
+          />
+        </Suspense>
       )}
     </div>
   )
