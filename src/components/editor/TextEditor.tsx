@@ -296,6 +296,12 @@ export function TextEditor({
     } else {
       // ブロック座標がない場合（結合モード等）: 空行を段落区切り、リーダー線も保持
       const SEPARATOR_RE = /^────/
+      // 行テキスト長の中央値を算出し、短い行の閾値を決定
+      const allLines = displayText.split('\n').filter(l => l.length > 0 && !SEPARATOR_RE.test(l))
+      const sortedLens = [...allLines.map(l => l.length)].sort((a, b) => a - b)
+      const median = sortedLens[Math.floor(sortedLens.length / 2)] ?? 0
+      const shortThreshold = median * 0.5
+
       newText = displayText
         .split('\n\n')
         .map(paragraph =>
@@ -306,6 +312,10 @@ export function TextEditor({
               if (SEPARATOR_RE.test(line)) return line + '\n'
               // リーダー線の直後の行はそのまま
               if (i > 0 && SEPARATOR_RE.test(arr[i - 1])) return line
+              // 短い行はタイトル・見出し・リスト項目とみなし改行を保持
+              if (line.length < shortThreshold) return line + '\n'
+              // 次の行が短い場合も改行を保持
+              if (i < arr.length - 1 && arr[i + 1].length < shortThreshold && !SEPARATOR_RE.test(arr[i + 1])) return line + '\n'
               return line
             })
             .join('')
