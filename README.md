@@ -185,26 +185,6 @@ npm run mcp-server
 
 ## 変更履歴
 
-### v0.5.0（2026-03-25）
-
-deluxeリポジトリからの機能取り込み:
-
-- feat: 画像前処理に湾曲補正（dewarp）を追加 — 綴じ部分の歪みを自動検出・補正
-- feat: 画像前処理の一括適用 — 現在の前処理設定を全画像にバッチ適用する「全画像に適用」ボタン
-- feat: ImageViewerに3つの表示モード — テキストオーバーレイ、信頼度ヒートマップ（赤=低→緑=高）、読み順番号バッジ
-- feat: OCR処理の中断機能 — バッチ処理中に「停止」ボタンで次のファイルの前に中断（処理済み結果は保持）
-- feat: TextEditorにundo/redo — 500msデバウンスで編集履歴を記録、Ctrl+Z / Ctrl+Shift+Z
-- feat: TEI/hOCRのバッチエクスポート — 複数ページのOCR結果をまとめて1ファイルとしてダウンロード
-- feat: AIモデルリスト更新 — claude-haiku-4-5、Gemini 2.5-flash/pro、Gemini 3.0-flash/pro-preview
-- perf: React.memo最適化 — Header/Footer/BottomToolbar/ProgressBarの不要な再レンダリングを防止
-- perf: Viteチャンク分割改善 — react-vendor/tiffの分離でキャッシュ効率向上
-- perf: React.lazyによる遅延読み込み — HistoryPanel/SettingsModal/ImagePreprocessPanel
-- refactor: UI言語を日英2言語に整理（OCR非対応の中国語・韓国語UIを削除）
-- feat: 欧米諸語OCR対応（OnnxTR PARSeq multilingual、12言語）
-- feat: 設定画面にOCRモデルタブ追加（認識言語・数式認識の選択UI）
-- feat: アップロード画面に現在のモデル構成を表示
-- feat: 数式認識（pix2text-mfr、領域選択→LaTeX出力→MathJaxプレビュー）
-
 ### v0.6.1（2026-03-26）
 
 - fix: 数式認識のBPEトークナイザーデコードを修正（ByteLevel BPEのUnicode→バイト変換テーブルを正しく実装）
@@ -220,6 +200,21 @@ deluxeリポジトリからの機能取り込み:
 - feat: 欧米諸語OCR対応（OnnxTR PARSeq multilingual、12言語）
 - feat: 設定画面にOCRモデルタブ追加（数式認識の有効/無効）
 - refactor: UI言語を日英2言語に整理（OCR非対応の中国語・韓国語UIを削除）
+
+### v0.5.0（2026-03-25）
+
+deluxeリポジトリからの機能取り込み:
+
+- feat: 画像前処理に湾曲補正（dewarp）を追加 — 綴じ部分の歪みを自動検出・補正
+- feat: 画像前処理の一括適用 — 現在の前処理設定を全画像にバッチ適用する「全画像に適用」ボタン
+- feat: ImageViewerに3つの表示モード — テキストオーバーレイ、信頼度ヒートマップ（赤=低→緑=高）、読み順番号バッジ
+- feat: OCR処理の中断機能 — バッチ処理中に「停止」ボタンで次のファイルの前に中断（処理済み結果は保持）
+- feat: TextEditorにundo/redo — 500msデバウンスで編集履歴を記録、Ctrl+Z / Ctrl+Shift+Z
+- feat: TEI/hOCRのバッチエクスポート — 複数ページのOCR結果をまとめて1ファイルとしてダウンロード
+- feat: AIモデルリスト更新 — claude-haiku-4-5、Gemini 2.5-flash/pro、Gemini 3.0-flash/pro-preview
+- perf: React.memo最適化 — Header/Footer/BottomToolbar/ProgressBarの不要な再レンダリングを防止
+- perf: Viteチャンク分割改善 — react-vendor/tiffの分離でキャッシュ効率向上
+- perf: React.lazyによる遅延読み込み — HistoryPanel/SettingsModal/ImagePreprocessPanel
 
 ### v0.4.3（2026-03-23）
 
