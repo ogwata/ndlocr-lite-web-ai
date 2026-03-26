@@ -299,6 +299,7 @@ export default function App() {
     const filteredBlocks = currentResult.textBlocks.filter(b => !currentExcludedBlocks.has(b.readingOrder))
     return {
       ...currentResult,
+      id: `${currentResult.id}-ex${Array.from(currentExcludedBlocks).sort().join(',')}`,
       textBlocks: filteredBlocks,
       fullText: filteredBlocks
         .slice()
@@ -406,7 +407,7 @@ export default function App() {
       parts.push(line + '\n' + text)
     }
     return {
-      id: `merged-${Array.from(indices).join('-')}`,
+      id: `merged-${Array.from(indices).join('-')}-ex${Array.from(Object.entries(excludedBlocksMap).flatMap(([k, v]) => Array.from(v).map(r => `${k}:${r}`))).sort().join(',')}`,
       fileName: `merged-${indices.length}-pages`,
       imageDataUrl: '',
       textBlocks: [],
