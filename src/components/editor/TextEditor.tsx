@@ -22,9 +22,10 @@ interface TextEditorProps {
   isMergedMode?: boolean
   mergedCount?: number
   onMergedEditChange?: (dirty: boolean) => void
-  mergedSections?: Array<{ imageDataUrl: string; text: string; label: string }>
+  mergedSections?: Array<{ imageDataUrl: string; text: string; label: string; excludedRects?: Array<{ x: number; y: number; width: number; height: number }> }>
   excludedCount?: number
   onRestoreAllBlocks?: () => void
+  excludedRects?: Array<{ x: number; y: number; width: number; height: number }>
 }
 
 type ProofreadState =
@@ -57,6 +58,7 @@ export function TextEditor({
   mergedSections,
   excludedCount,
   onRestoreAllBlocks,
+  excludedRects,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -232,6 +234,28 @@ export function TextEditor({
     )
   }
 
+  // 除外ブロック領域を白で塗りつぶした画像を生成
+  const maskExcludedRegions = useCallback((dataUrl: string, rects: Array<{ x: number; y: number; width: number; height: number }>): Promise<string> => {
+    return new Promise((resolve) => {
+      if (rects.length === 0) { resolve(dataUrl); return }
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+        ctx.fillStyle = '#ffffff'
+        for (const r of rects) {
+          ctx.fillRect(r.x, r.y, r.width, r.height)
+        }
+        resolve(canvas.toDataURL('image/jpeg', 0.85))
+      }
+      img.onerror = () => resolve(dataUrl)
+      img.src = dataUrl
+    })
+  }, [])
+
   // AI校正実行
   const handleProofread = useCallback(async () => {
     if (!aiConnector || !result) return
@@ -249,10 +273,18 @@ export function TextEditor({
     try {
       let correctedText: string
 
+      const rects = excludedRects ?? []
+
       if (isMergedMode && mergedSections && mergedSections.length > 0) {
         // 結合モード: 各セクションを並列にAI校正し、リーダー線で再結合
+        const maskedSections = await Promise.all(
+          mergedSections.map(async section => ({
+            ...section,
+            imageDataUrl: await maskExcludedRegions(section.imageDataUrl, section.excludedRects ?? []),
+          }))
+        )
         const results = await Promise.all(
-          mergedSections.map(section =>
+          maskedSections.map(section =>
             aiConnector.proofread(section.text, section.imageDataUrl)
           )
         )
@@ -264,8 +296,9 @@ export function TextEditor({
           })
           .join('\n\n')
       } else {
-        // 単一モード: 従来通り
-        const proofResult = await aiConnector.proofread(textToProofread, imageDataUrl ?? '')
+        // 単一モード: 除外ブロック領域を塗りつぶした画像を使用
+        const maskedImage = await maskExcludedRegions(imageDataUrl ?? '', rects)
+        const proofResult = await aiConnector.proofread(textToProofread, maskedImage)
         correctedText = proofResult.correctedText
       }
 
@@ -280,7 +313,7 @@ export function TextEditor({
         message: err instanceof Error ? err.message : String(err),
       })
     }
-  }, [aiConnector, aiConnectionStatus, lang, result, editedText, imageDataUrl, isMergedMode, mergedSections])
+  }, [aiConnector, aiConnectionStatus, lang, result, editedText, imageDataUrl, isMergedMode, mergedSections, excludedRects, maskExcludedRegions])
 
   // 校正結果を全て適用
   const handleAcceptAll = useCallback(() => {

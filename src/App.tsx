@@ -437,9 +437,12 @@ export default function App() {
           .sort((a, b) => a.readingOrder - b.readingOrder)
           .map(b => b.text)
           .join('\n')
-        return { imageDataUrl: result.imageDataUrl, text, label }
+        const excludedRects = result.textBlocks
+          .filter(b => excluded.has(b.readingOrder))
+          .map(b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))
+        return { imageDataUrl: result.imageDataUrl, text, label, excludedRects }
       })
-      .filter((s): s is { imageDataUrl: string; text: string; label: string } => s !== null)
+      .filter((s): s is { imageDataUrl: string; text: string; label: string; excludedRects: Array<{ x: number; y: number; width: number; height: number }> } => s !== null)
   }, [resultSelectedIndices, sessionResults, processedImages, excludedBlocksMap])
 
   const selectedPageBlockText = useMemo(() => {
@@ -1074,6 +1077,7 @@ export default function App() {
                     onRestoreBlocks={handleRestoreBlocks}
                     excludedCount={currentExcludedBlocks.size}
                     onRestoreAllBlocks={handleRestoreAllBlocks}
+                    excludedRects={currentResult ? currentResult.textBlocks.filter(b => currentExcludedBlocks.has(b.readingOrder)).map(b => ({ x: b.x, y: b.y, width: b.width, height: b.height })) : []}
                     selectedPageBlockText={isMergedMode ? null : selectedPageBlockText}
                     lang={lang}
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
