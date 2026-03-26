@@ -15,6 +15,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - ImageViewer表示モード（テキストオーバーレイ・信頼度ヒートマップ・読み順表示）
 - TextEditorのundo/redo（デバウンス付き編集履歴スタック）
 - バッチOCR処理の中断機能
+- サイドバー常設ツールバー（個別画像削除・画像追加・全画像削除）
 
 詳細な開発計画は `docs/NDLOCR-Lite-Web-AI-開発計画書.md` を参照。
 
