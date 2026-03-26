@@ -62,7 +62,17 @@ export function TextEditor({
   onRestoreAllBlocks,
   excludedRects,
 }: TextEditorProps) {
-  const [editedText, setEditedText] = useState<string | null>(null)
+  const [editedText, setEditedTextRaw] = useState<string | null>(null)
+  // 結果IDごとに編集テキストを保持するキャッシュ（セッション中有効）
+  const editCacheRef = useRef<Map<string, string>>(new Map())
+  // editedText をセットする際、dirty フラグも自動的に立てるラッパー
+  const setEditedText = useCallback((text: string | null) => {
+    setEditedTextRaw(text)
+    if (text !== null) {
+      if (isMergedMode) onMergedEditChange?.(true)
+      else onSingleEditChange?.(true)
+    }
+  }, [isMergedMode, onMergedEditChange, onSingleEditChange])
   const [copied, setCopied] = useState(false)
   const [includeFileName, setIncludeFileName] = useState(false)
   const [proofreadState, setProofreadState] = useState<ProofreadState>({ status: 'idle' })
@@ -144,10 +154,8 @@ export function TextEditor({
       setRedoStack([])
       setEditedText(newText)
       onTextChange?.(newText)
-      if (isMergedMode) onMergedEditChange?.(true)
-      if (!isMergedMode) onSingleEditChange?.(true)
     },
-    [onTextChange, displayText, flushUndo, isMergedMode, onMergedEditChange, onSingleEditChange],
+    [onTextChange, displayText, flushUndo, setEditedText],
   )
 
   const handleUndo = useCallback(() => {
@@ -218,11 +226,17 @@ export function TextEditor({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showSearchBar, handleUndo, handleRedo])
 
-  // result が変わったら編集状態・校正状態をリセット
+  // result が変わったら編集状態・校正状態をリセット（編集テキストはキャッシュに保存・復元）
   const [prevResultId, setPrevResultId] = useState<string | null>(null)
   if (result && result.id !== prevResultId) {
+    // 前の結果の編集テキストをキャッシュに保存
+    if (prevResultId && editedText !== null) {
+      editCacheRef.current.set(prevResultId, editedText)
+    }
     setPrevResultId(result.id)
-    setEditedText(null)
+    // 新しい結果のキャッシュがあれば復元、なければリセット
+    const cached = editCacheRef.current.get(result.id)
+    setEditedTextRaw(cached ?? null)
     setProofreadState({ status: 'idle' })
     setUndoStack([])
     setRedoStack([])
@@ -439,7 +453,8 @@ Rules:
       let correctedText: string
 
       if (isMergedMode && mergedSections && mergedSections.length > 0) {
-        // 結合モード: 各セクションを並列にAI校正し、完了数をトラッキング
+        // 結合モード: レートリミット回避のため3件ずつ順次処理
+        const BATCH_SIZE = 3
         const maskedSections = await Promise.all(
           mergedSections.map(async section => ({
             ...section,
@@ -447,14 +462,19 @@ Rules:
           }))
         )
         let completed = 0
-        const results = await Promise.all(
-          maskedSections.map(async section => {
-            const r = await aiConnector.proofread(section.text, section.imageDataUrl)
-            completed++
-            setProofreadState({ status: 'loading', completed, total, startTime })
-            return r
-          })
-        )
+        const results: Awaited<ReturnType<typeof aiConnector.proofread>>[] = []
+        for (let i = 0; i < maskedSections.length; i += BATCH_SIZE) {
+          const batch = maskedSections.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.all(
+            batch.map(async section => {
+              const r = await aiConnector.proofread(section.text, section.imageDataUrl)
+              completed++
+              setProofreadState({ status: 'loading', completed, total, startTime })
+              return r
+            })
+          )
+          results.push(...batchResults)
+        }
         correctedText = results
           .map((r, i) => {
             const label = mergedSections[i].label
