@@ -1068,7 +1068,7 @@ export default function App() {
                 right={
                   <TextEditor
                     result={editorResult}
-                    selectedBlocksInfo={isMergedMode ? null : selectedBlocksInfo}
+                    selectedBlocksInfo={selectedBlocksInfo}
                     onExcludeBlocks={handleExcludeBlocks}
                     onRestoreBlocks={handleRestoreBlocks}
                     excludedCount={currentExcludedBlocks.size}
