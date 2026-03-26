@@ -1953,6 +1953,33 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   padding: 0.15rem 0.5rem;
   border-radius: 10px;
 }
+.text-editor-excluded-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #e74c3c;
+  white-space: nowrap;
+  background: rgba(231, 76, 60, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+.text-editor-excluded-badge .text-editor-restore-btn {
+  font-size: 0.6rem;
+  padding: 0 0.3rem;
+  background: none;
+  border: 1px solid #e74c3c;
+  border-radius: 4px;
+  color: #e74c3c;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.text-editor-excluded-badge .text-editor-restore-btn:hover {
+  background: #e74c3c;
+  color: #fff;
+}
 
 .text-editor-ai-status {
   display: flex;

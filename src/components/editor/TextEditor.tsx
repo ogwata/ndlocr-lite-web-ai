@@ -23,6 +23,8 @@ interface TextEditorProps {
   mergedCount?: number
   onMergedEditChange?: (dirty: boolean) => void
   mergedSections?: Array<{ imageDataUrl: string; text: string; label: string }>
+  excludedCount?: number
+  onRestoreAllBlocks?: () => void
 }
 
 type ProofreadState =
@@ -53,6 +55,8 @@ export function TextEditor({
   mergedCount,
   onMergedEditChange,
   mergedSections,
+  excludedCount,
+  onRestoreAllBlocks,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -350,6 +354,14 @@ export function TextEditor({
               {lang === 'ja' ? ' 領域' : ' regions'}
               {' · '}
               {(result.processingTimeMs / 1000).toFixed(1)}s
+            </span>
+          )}
+          {excludedCount != null && excludedCount > 0 && onRestoreAllBlocks && (
+            <span className="text-editor-excluded-badge">
+              {lang === 'ja' ? `${excludedCount}件除外中` : `${excludedCount} excluded`}
+              <button className="text-editor-restore-btn" onClick={onRestoreAllBlocks}>
+                {lang === 'ja' ? '全て復活' : 'Restore all'}
+              </button>
             </span>
           )}
         </div>

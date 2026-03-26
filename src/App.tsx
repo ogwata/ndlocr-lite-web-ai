@@ -373,6 +373,16 @@ export default function App() {
     return { count: blocks.length, text, hasExcluded, hasNonExcluded }
   }, [selectedBlocks, currentResult, currentExcludedBlocks])
 
+  // 除外を全て復活
+  const handleRestoreAllBlocks = useCallback(() => {
+    if (!currentResult) return
+    setExcludedBlocksMap(prev => {
+      const next = { ...prev }
+      delete next[currentResult.id]
+      return next
+    })
+  }, [currentResult])
+
   // 結合表示用の仮想OCRResult
   const mergedResult = useMemo<OCRResult | null>(() => {
     if (resultSelectedIndices.size < 2) return null
@@ -1055,6 +1065,8 @@ export default function App() {
                     selectedBlocksInfo={isMergedMode ? null : selectedBlocksInfo}
                     onExcludeBlocks={handleExcludeBlocks}
                     onRestoreBlocks={handleRestoreBlocks}
+                    excludedCount={currentExcludedBlocks.size}
+                    onRestoreAllBlocks={handleRestoreAllBlocks}
                     selectedPageBlockText={isMergedMode ? null : selectedPageBlockText}
                     lang={lang}
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
