@@ -1935,6 +1935,15 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   border-radius: 10px;
   border: 1px solid var(--color-border-light);
 }
+.text-editor-merged-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--color-primary);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+}
 
 .text-editor-ai-status {
   display: flex;

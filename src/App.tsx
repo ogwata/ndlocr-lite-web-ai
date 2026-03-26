@@ -82,6 +82,7 @@ export default function App() {
   const [pendingImageIndex, setPendingImageIndex] = useState(0)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [resultSelectedIndices, setResultSelectedIndices] = useState<Set<number>>(new Set())
+  const [mergedEditDirty, setMergedEditDirty] = useState(false)
   const lastClickedIndexRef = useRef<number>(0)
   const resultLastClickedIndexRef = useRef<number>(0)
   const cancelRef = useRef(false)
@@ -149,7 +150,15 @@ export default function App() {
         return next
       })
     } else {
+      // 通常クリック: 結合モードから単一に戻る場合、編集済みなら確認
+      if (resultSelectedIndices.size >= 2 && mergedEditDirty) {
+        const msg = lang === 'ja'
+          ? '結合テキストの編集内容は破棄されます。よろしいですか？'
+          : 'Edits to the merged text will be discarded. Continue?'
+        if (!window.confirm(msg)) return
+      }
       setResultSelectedIndices(new Set())
+      setMergedEditDirty(false)
       resultLastClickedIndexRef.current = index
     }
 
@@ -158,7 +167,7 @@ export default function App() {
       setSelectedBlock(null)
       setSelectedRegion(null)
     }
-  }, [sessionResults])
+  }, [sessionResults, resultSelectedIndices.size, mergedEditDirty, lang])
 
   // サイドバー: 個別画像削除
   const handleRemoveImage = useCallback((index: number) => {
@@ -273,6 +282,38 @@ export default function App() {
   useEffect(() => { setPendingImageIndex(0); setSelectedIndices(new Set()) }, [processedImages])
 
   const currentResult = sessionResults[selectedResultIndex] ?? null
+
+  // 結合表示用の仮想OCRResult
+  const mergedResult = useMemo<OCRResult | null>(() => {
+    if (resultSelectedIndices.size < 2) return null
+    const indices = Array.from(resultSelectedIndices).sort((a, b) => a - b)
+    const parts: string[] = []
+    for (const i of indices) {
+      const result = sessionResults[i]
+      if (!result) continue
+      const img = processedImages[i]
+      const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
+      const line = `──────────── ${label} ────────────`
+      const text = result.textBlocks
+        .slice()
+        .sort((a, b) => a.readingOrder - b.readingOrder)
+        .map(b => b.text)
+        .join('\n')
+      parts.push(line + '\n' + text)
+    }
+    return {
+      id: `merged-${Array.from(indices).join('-')}`,
+      fileName: `merged-${indices.length}-pages`,
+      imageDataUrl: '',
+      textBlocks: [],
+      fullText: parts.join('\n\n'),
+      processingTimeMs: 0,
+      createdAt: Date.now(),
+    }
+  }, [resultSelectedIndices, sessionResults, processedImages])
+
+  const isMergedMode = mergedResult !== null
+  const editorResult = isMergedMode ? mergedResult : currentResult
 
   const selectedPageBlockText = useMemo(() => {
     if (!selectedPageBlock || !currentResult) return null
@@ -899,15 +940,18 @@ export default function App() {
                 }
                 right={
                   <TextEditor
-                    result={currentResult}
-                    selectedBlock={selectedBlock}
-                    selectedPageBlockText={selectedPageBlockText}
+                    result={editorResult}
+                    selectedBlock={isMergedMode ? null : selectedBlock}
+                    selectedPageBlockText={isMergedMode ? null : selectedPageBlockText}
                     lang={lang}
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
                     aiConnectionStatus={aiConnectionStatus}
                     imageDataUrl={currentResult?.imageDataUrl}
                     onBatchTextExport={handleBatchTextExport}
                     hasBatchResults={sessionResults.length > 1}
+                    isMergedMode={isMergedMode}
+                    mergedCount={resultSelectedIndices.size}
+                    onMergedEditChange={setMergedEditDirty}
                   />
                 }
               />

@@ -17,6 +17,9 @@ interface TextEditorProps {
   imageDataUrl?: string
   onBatchTextExport?: () => void
   hasBatchResults?: boolean
+  isMergedMode?: boolean
+  mergedCount?: number
+  onMergedEditChange?: (dirty: boolean) => void
 }
 
 type ProofreadState =
@@ -41,6 +44,9 @@ export function TextEditor({
   imageDataUrl,
   onBatchTextExport,
   hasBatchResults,
+  isMergedMode,
+  mergedCount,
+  onMergedEditChange,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -110,8 +116,9 @@ export function TextEditor({
       setRedoStack([])
       setEditedText(newText)
       onTextChange?.(newText)
+      if (isMergedMode) onMergedEditChange?.(true)
     },
-    [onTextChange, displayText, flushUndo],
+    [onTextChange, displayText, flushUndo, isMergedMode, onMergedEditChange],
   )
 
   const handleUndo = useCallback(() => {
@@ -306,12 +313,18 @@ export function TextEditor({
       <div className="text-editor-header">
         <div className="text-editor-header-left">
           <span className="text-editor-label">OCR result</span>
-          <span className="text-editor-stats">
-            {result.textBlocks.length}
-            {lang === 'ja' ? ' 領域' : ' regions'}
-            {' · '}
-            {(result.processingTimeMs / 1000).toFixed(1)}s
-          </span>
+          {isMergedMode ? (
+            <span className="text-editor-merged-badge">
+              {lang === 'ja' ? `${mergedCount}件を結合表示中` : `${mergedCount} pages merged`}
+            </span>
+          ) : (
+            <span className="text-editor-stats">
+              {result.textBlocks.length}
+              {lang === 'ja' ? ' 領域' : ' regions'}
+              {' · '}
+              {(result.processingTimeMs / 1000).toFixed(1)}s
+            </span>
+          )}
         </div>
         <div className="text-editor-header-buttons">
           <button
