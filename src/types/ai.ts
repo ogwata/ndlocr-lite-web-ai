@@ -71,6 +71,7 @@ Important instructions:
 - For European languages: fix misrecognized diacritics (ä, ö, ü, ß, é, è, ê, ç, ñ, etc.).
 - Fix misrecognized punctuation and symbols.
 - Preserve line breaks as they appear in the OCR output.
+- Preserve separator lines (──────────── filename ────────────) exactly as they are. Do not modify or remove them.
 - Output only the corrected text. No explanations.`
 
 /** プロンプトに文書言語を埋め込む */
