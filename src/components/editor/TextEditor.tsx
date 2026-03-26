@@ -399,7 +399,7 @@ export function TextEditor({
           <button
             className="btn btn-ai"
             onClick={handleProofread}
-            disabled={!aiConnector || proofreadState.status === 'loading' || result.textBlocks.length === 0}
+            disabled={!aiConnector || proofreadState.status === 'loading' || (result.textBlocks.length === 0 && !result.fullText)}
             title={!aiConnector ? (lang === 'ja' ? '設定でAI接続を構成してください' : 'Configure AI connection in Settings') : ''}
           >
             {proofreadState.status === 'loading'
@@ -537,7 +537,7 @@ export function TextEditor({
 
       {/* メイン: テキストエリア or 差分表示 */}
       <div className="text-editor-body">
-        {result.textBlocks.length === 0 ? (
+        {result.textBlocks.length === 0 && !result.fullText ? (
           <p className="text-editor-empty-text">
             {lang === 'ja' ? 'テキストが検出されませんでした' : 'No text detected'}
           </p>
