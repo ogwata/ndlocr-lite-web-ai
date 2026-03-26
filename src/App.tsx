@@ -85,6 +85,7 @@ export default function App() {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [resultSelectedIndices, setResultSelectedIndices] = useState<Set<number>>(new Set())
   const [mergedEditDirty, setMergedEditDirty] = useState(false)
+  const [singleEditDirty, setSingleEditDirty] = useState(false)
   const lastClickedIndexRef = useRef<number>(0)
   const resultLastClickedIndexRef = useRef<number>(0)
   const cancelRef = useRef(false)
@@ -127,10 +128,30 @@ export default function App() {
   }, [])
 
   // 結果サイドバーのクリックハンドラ（Cmd/Ctrl+クリック、Shift+クリック対応）
+  // 編集中テキストの破棄確認ヘルパー
+  const confirmDiscardEdits = useCallback((): boolean => {
+    const isMerged = resultSelectedIndices.size >= 2
+    const isDirty = isMerged ? mergedEditDirty : singleEditDirty
+    if (!isDirty) return true
+    const msg = lang === 'ja'
+      ? 'テキストの編集内容が破棄されます。よろしいですか？'
+      : 'Text edits will be discarded. Continue?'
+    return window.confirm(msg)
+  }, [resultSelectedIndices.size, mergedEditDirty, singleEditDirty, lang])
+
   const handleResultSidebarClick = useCallback((index: number, e: React.MouseEvent) => {
     const isMetaKey = e.metaKey || e.ctrlKey
+    const currentSize = resultSelectedIndices.size
+    const isMerged = currentSize >= 2
 
     if (isMetaKey) {
+      // Cmd/Ctrl+クリック: トグル選択
+      const isDeselecting = resultSelectedIndices.has(index)
+      // 結合モードで選択を減らして1枚になる場合、または単一モードで結合モードに移行する場合
+      const willBecomeSize = isDeselecting ? currentSize - 1 : currentSize + 1
+      const modeChanges = (isMerged && willBecomeSize < 2) || (!isMerged && willBecomeSize >= 2)
+      if (modeChanges && !confirmDiscardEdits()) return
+
       setResultSelectedIndices(prev => {
         const next = new Set(prev)
         if (next.has(index)) {
@@ -140,8 +161,16 @@ export default function App() {
         }
         return next
       })
+      if (modeChanges) {
+        setMergedEditDirty(false)
+        setSingleEditDirty(false)
+      }
       resultLastClickedIndexRef.current = index
     } else if (e.shiftKey) {
+      // Shift+クリック: 範囲選択（単一→結合モードへの移行を含む）
+      if (!isMerged && singleEditDirty) {
+        if (!confirmDiscardEdits()) return
+      }
       const start = Math.min(resultLastClickedIndexRef.current, index)
       const end = Math.max(resultLastClickedIndexRef.current, index)
       setResultSelectedIndices(prev => {
@@ -151,16 +180,16 @@ export default function App() {
         }
         return next
       })
+      setSingleEditDirty(false)
     } else {
-      // 通常クリック: 結合モードから単一に戻る場合、編集済みなら確認
-      if (resultSelectedIndices.size >= 2 && mergedEditDirty) {
-        const msg = lang === 'ja'
-          ? '結合テキストの編集内容は破棄されます。よろしいですか？'
-          : 'Edits to the merged text will be discarded. Continue?'
-        if (!window.confirm(msg)) return
-      }
+      // 通常クリック: 単一選択に戻る
+      // 結合モードからの離脱、または単一モードで別画像への切り替え
+      const switchesSingleImage = !isMerged && index !== selectedResultIndex
+      if ((isMerged || switchesSingleImage) && !confirmDiscardEdits()) return
+
       setResultSelectedIndices(new Set())
       setMergedEditDirty(false)
+      setSingleEditDirty(false)
       resultLastClickedIndexRef.current = index
     }
 
@@ -169,7 +198,7 @@ export default function App() {
       setSelectedBlocks(new Set())
       setSelectedRegion(null)
     }
-  }, [sessionResults, resultSelectedIndices.size, mergedEditDirty, lang])
+  }, [sessionResults, resultSelectedIndices, mergedEditDirty, singleEditDirty, lang, confirmDiscardEdits, selectedResultIndex])
 
   // サイドバー: 個別画像削除
   const handleRemoveImage = useCallback((index: number) => {
@@ -1088,6 +1117,7 @@ export default function App() {
                     isMergedMode={isMergedMode}
                     mergedCount={resultSelectedIndices.size}
                     onMergedEditChange={setMergedEditDirty}
+                    onSingleEditChange={setSingleEditDirty}
                     mergedSections={mergedSections}
                   />
                 }

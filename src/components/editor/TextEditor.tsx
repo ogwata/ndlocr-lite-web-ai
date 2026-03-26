@@ -22,6 +22,7 @@ interface TextEditorProps {
   isMergedMode?: boolean
   mergedCount?: number
   onMergedEditChange?: (dirty: boolean) => void
+  onSingleEditChange?: (dirty: boolean) => void
   mergedSections?: Array<{ imageDataUrl: string; text: string; label: string; excludedRects?: Array<{ x: number; y: number; width: number; height: number }> }>
   excludedCount?: number
   onRestoreAllBlocks?: () => void
@@ -55,6 +56,7 @@ export function TextEditor({
   isMergedMode,
   mergedCount,
   onMergedEditChange,
+  onSingleEditChange,
   mergedSections,
   excludedCount,
   onRestoreAllBlocks,
@@ -130,8 +132,9 @@ export function TextEditor({
       setEditedText(newText)
       onTextChange?.(newText)
       if (isMergedMode) onMergedEditChange?.(true)
+      if (!isMergedMode) onSingleEditChange?.(true)
     },
-    [onTextChange, displayText, flushUndo, isMergedMode, onMergedEditChange],
+    [onTextChange, displayText, flushUndo, isMergedMode, onMergedEditChange, onSingleEditChange],
   )
 
   const handleUndo = useCallback(() => {
