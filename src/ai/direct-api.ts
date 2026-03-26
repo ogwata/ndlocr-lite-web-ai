@@ -1,7 +1,7 @@
 import type { AIConnector, ProofreadResult, ProviderConfig, AIProvider } from '../types/ai'
 import { PROVIDER_ENDPOINTS, DEFAULT_PROOFREAD_PROMPT } from '../types/ai'
 
-const REQUEST_TIMEOUT_MS = 60_000
+const REQUEST_TIMEOUT_MS = 120_000
 const MAX_RETRIES = 2
 const INITIAL_RETRY_DELAY_MS = 1000
 
@@ -162,7 +162,7 @@ async function callAnthropic(
     },
     body: JSON.stringify({
       model: config.model,
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content }],
     }),
@@ -210,7 +210,7 @@ async function callOpenAICompatible(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
-      max_tokens: 4096,
+      max_tokens: 8192,
     }),
   })
 
@@ -254,7 +254,7 @@ async function callGoogle(
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ parts }],
-      generationConfig: { maxOutputTokens: 4096 },
+      generationConfig: { maxOutputTokens: 8192 },
     }),
   })
 

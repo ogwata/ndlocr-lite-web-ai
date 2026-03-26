@@ -725,8 +725,9 @@ Rules:
         <div className="text-editor-ai-status">
           {proofreadState.status === 'loading' && <span className="ai-bar-spinner" />}
           {proofreadState.status === 'error' && (
-            <span className="ai-bar-error" title={proofreadState.message}>
-              {lang === 'ja' ? '校正エラー' : 'Proofread Error'}
+            <span className="ai-bar-error">
+              {lang === 'ja' ? '校正エラー: ' : 'Proofread Error: '}
+              {proofreadState.message}
             </span>
           )}
         </div>
