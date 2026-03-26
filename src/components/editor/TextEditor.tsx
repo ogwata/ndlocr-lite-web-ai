@@ -31,7 +31,7 @@ interface TextEditorProps {
 
 type ProofreadState =
   | { status: 'idle' }
-  | { status: 'loading'; completed?: number; total?: number }
+  | { status: 'loading'; completed?: number; total?: number; startTime: number }
   | { status: 'done'; originalText: string; correctedText: string }
   | { status: 'error'; message: string }
 
@@ -75,9 +75,22 @@ export function TextEditor({
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   const [lineBreaksRemoved, setLineBreaksRemoved] = useState(false)
   const [vfmState, setVfmState] = useState<'idle' | 'loading'>('idle')
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
+
+  // AI校正中の経過時間を1秒ごとに更新
+  useEffect(() => {
+    if (proofreadState.status !== 'loading') {
+      setElapsedSeconds(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - proofreadState.startTime) / 1000))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [proofreadState.status, proofreadState.status === 'loading' ? proofreadState.startTime : 0])
 
   // Undo/Redo stacks
   interface UndoRedoEntry { text: string; cursorPos?: number }
@@ -420,7 +433,8 @@ Rules:
     const textToProofread = editedText ?? result.fullText
     const rects = excludedRects ?? []
     const total = (isMergedMode && mergedSections) ? mergedSections.length : 1
-    setProofreadState({ status: 'loading', completed: 0, total })
+    const startTime = Date.now()
+    setProofreadState({ status: 'loading', completed: 0, total, startTime })
     try {
       let correctedText: string
 
@@ -437,7 +451,7 @@ Rules:
           maskedSections.map(async section => {
             const r = await aiConnector.proofread(section.text, section.imageDataUrl)
             completed++
-            setProofreadState({ status: 'loading', completed, total })
+            setProofreadState({ status: 'loading', completed, total, startTime })
             return r
           })
         )
@@ -629,8 +643,8 @@ Rules:
           >
             {proofreadState.status === 'loading'
               ? (proofreadState.total != null && proofreadState.total > 1
-                ? (lang === 'ja' ? `AI校正中... ${proofreadState.completed ?? 0}/${proofreadState.total}` : `Proofreading... ${proofreadState.completed ?? 0}/${proofreadState.total}`)
-                : (lang === 'ja' ? 'AI校正中...' : 'Proofreading...'))
+                ? (lang === 'ja' ? `AI校正中... ${proofreadState.completed ?? 0}/${proofreadState.total}（${elapsedSeconds}秒）` : `Proofreading... ${proofreadState.completed ?? 0}/${proofreadState.total} (${elapsedSeconds}s)`)
+                : (lang === 'ja' ? `AI校正中...（${elapsedSeconds}秒）` : `Proofreading... (${elapsedSeconds}s)`))
               : (lang === 'ja' ? 'AI校正' : 'AI Proofread')}
           </button>
           <button
