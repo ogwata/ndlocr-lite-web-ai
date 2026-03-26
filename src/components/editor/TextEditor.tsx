@@ -30,7 +30,7 @@ interface TextEditorProps {
 
 type ProofreadState =
   | { status: 'idle' }
-  | { status: 'loading' }
+  | { status: 'loading'; completed?: number; total?: number }
   | { status: 'done'; originalText: string; correctedText: string }
   | { status: 'error'; message: string }
 
@@ -390,24 +390,28 @@ Rules:
     }
 
     const textToProofread = editedText ?? result.fullText
-    setProofreadState({ status: 'loading' })
+    const rects = excludedRects ?? []
+    const total = (isMergedMode && mergedSections) ? mergedSections.length : 1
+    setProofreadState({ status: 'loading', completed: 0, total })
     try {
       let correctedText: string
 
-      const rects = excludedRects ?? []
-
       if (isMergedMode && mergedSections && mergedSections.length > 0) {
-        // 結合モード: 各セクションを並列にAI校正し、リーダー線で再結合
+        // 結合モード: 各セクションを並列にAI校正し、完了数をトラッキング
         const maskedSections = await Promise.all(
           mergedSections.map(async section => ({
             ...section,
             imageDataUrl: await maskExcludedRegions(section.imageDataUrl, section.excludedRects ?? []),
           }))
         )
+        let completed = 0
         const results = await Promise.all(
-          maskedSections.map(section =>
-            aiConnector.proofread(section.text, section.imageDataUrl)
-          )
+          maskedSections.map(async section => {
+            const r = await aiConnector.proofread(section.text, section.imageDataUrl)
+            completed++
+            setProofreadState({ status: 'loading', completed, total })
+            return r
+          })
         )
         correctedText = results
           .map((r, i) => {
@@ -596,7 +600,9 @@ Rules:
             title={!aiConnector ? (lang === 'ja' ? '設定でAI接続を構成してください' : 'Configure AI connection in Settings') : ''}
           >
             {proofreadState.status === 'loading'
-              ? (lang === 'ja' ? 'AI校正中...' : 'Proofreading...')
+              ? (proofreadState.total != null && proofreadState.total > 1
+                ? (lang === 'ja' ? `AI校正中... ${proofreadState.completed ?? 0}/${proofreadState.total}` : `Proofreading... ${proofreadState.completed ?? 0}/${proofreadState.total}`)
+                : (lang === 'ja' ? 'AI校正中...' : 'Proofreading...'))
               : (lang === 'ja' ? 'AI校正' : 'AI Proofread')}
           </button>
           <button

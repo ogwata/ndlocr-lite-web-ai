@@ -250,6 +250,10 @@ npm run mcp-server
 
 ## 変更履歴
 
+### v0.12.1（2026-03-26）
+
+- feat: 結合モードのAI校正で「N/M件処理中」の進捗表示を追加
+
 ### v0.12.0（2026-03-26）
 
 - feat: 「VFM」ボタン — AIを使ってOCRテキストをVivliostyle Flavored Markdownに変換（改行削除後に使用可能）
