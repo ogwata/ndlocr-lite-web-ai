@@ -17,8 +17,6 @@ interface TextEditorProps {
   aiConnector: AIConnector | null
   aiConnectionStatus?: AIConnectionStatus
   imageDataUrl?: string
-  onBatchTextExport?: () => void
-  hasBatchResults?: boolean
   isMergedMode?: boolean
   mergedCount?: number
   onMergedEditChange?: (dirty: boolean) => void
@@ -51,8 +49,6 @@ export function TextEditor({
   aiConnector,
   aiConnectionStatus = 'disconnected',
   imageDataUrl,
-  onBatchTextExport,
-  hasBatchResults,
   isMergedMode,
   mergedCount,
   onMergedEditChange,
@@ -83,7 +79,10 @@ export function TextEditor({
   const [replaceQuery, setReplaceQuery] = useState('')
   const [isVertical, setIsVertical] = useState(false)
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
-  const [lineBreaksRemoved, setLineBreaksRemoved] = useState(false)
+  // 改行削除の3状態: 'none' → '1'（段落保持） → '2'（段落なし） → 'none' ...
+  const [lineBreakMode, setLineBreakMode] = useState<'none' | '1' | '2'>('none')
+  const originalTextRef = useRef<string | null>(null) // 改行削除前のテキストを保持
+  const lineBreak1TextRef = useRef<string | null>(null) // 改行削除1の結果を保持
   const [vfmState, setVfmState] = useState<'idle' | 'loading'>('idle')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
@@ -240,7 +239,9 @@ export function TextEditor({
     setProofreadState({ status: 'idle' })
     setUndoStack([])
     setRedoStack([])
-    setLineBreaksRemoved(false)
+    setLineBreakMode('none')
+    originalTextRef.current = null
+    lineBreak1TextRef.current = null
     setVfmState('idle')
   }
 
@@ -264,27 +265,16 @@ export function TextEditor({
     )
   }
 
-  // 改行削除（段落区切りのみ保持）
-  const handleRemoveLineBreaks = useCallback(() => {
-    if (!result || !displayText) return
-
-    // undo用にスナップショットを保存
-    if (pendingUndoRef.current === null) {
-      pendingUndoRef.current = displayText
-    }
-    flushUndo()
-
+  // 改行削除1: 段落区切りを保持して段落内の改行を削除
+  const computeLineBreak1 = useCallback((sourceText: string): string => {
+    if (!result) return sourceText
     const blocks = result.textBlocks
       .slice()
       .sort((a, b) => a.readingOrder - b.readingOrder)
 
-    let newText: string
     if (blocks.length > 0) {
-      // ブロック座標がある場合: 間隔＋行の短さから段落区切りを判定
-      const lines = displayText.split('\n')
+      const lines = sourceText.split('\n')
       const paragraphBreaks = new Set<number>()
-
-      // 行テキスト長の中央値を算出し、短い行の閾値を決定
       const textLengths = lines.map(l => l.length).filter(l => l > 0)
       const sortedLengths = [...textLengths].sort((a, b) => a - b)
       const medianLength = sortedLengths[Math.floor(sortedLengths.length / 2)] ?? 0
@@ -295,17 +285,9 @@ export function TextEditor({
         const next = blocks[i + 1]
         const gap = next.y - (current.y + current.height)
         const avgHeight = (current.height + next.height) / 2
-        // 間隔が大きい場合: 段落区切り
-        if (gap > avgHeight * 0.5) {
-          paragraphBreaks.add(i)
-        }
-        // 現在の行または次の行が短い場合: タイトル・見出し・リスト項目とみなす
-        if (lines[i] && lines[i].length < shortLineThreshold) {
-          paragraphBreaks.add(i)
-        }
-        if (lines[i + 1] && lines[i + 1].length < shortLineThreshold) {
-          paragraphBreaks.add(i)
-        }
+        if (gap > avgHeight * 0.5) paragraphBreaks.add(i)
+        if (lines[i] && lines[i].length < shortLineThreshold) paragraphBreaks.add(i)
+        if (lines[i + 1] && lines[i + 1].length < shortLineThreshold) paragraphBreaks.add(i)
       }
       paragraphBreaks.add(blocks.length - 1)
 
@@ -319,29 +301,23 @@ export function TextEditor({
         }
       }
       if (currentParagraph) parts.push(currentParagraph)
-      newText = parts.join('\n')
+      return parts.join('\n')
     } else {
-      // ブロック座標がない場合（結合モード等）: 空行を段落区切り、リーダー線も保持
       const SEPARATOR_RE = /^────/
-      // 行テキスト長の中央値を算出し、短い行の閾値を決定
-      const allLines = displayText.split('\n').filter(l => l.length > 0 && !SEPARATOR_RE.test(l))
+      const allLines = sourceText.split('\n').filter(l => l.length > 0 && !SEPARATOR_RE.test(l))
       const sortedLens = [...allLines.map(l => l.length)].sort((a, b) => a - b)
       const median = sortedLens[Math.floor(sortedLens.length / 2)] ?? 0
       const shortThreshold = median * 0.5
 
-      newText = displayText
+      return sourceText
         .split('\n\n')
         .map(paragraph =>
           paragraph
             .split('\n')
             .map((line, i, arr) => {
-              // リーダー線は独立行として保持
               if (SEPARATOR_RE.test(line)) return line + '\n'
-              // リーダー線の直後の行はそのまま
               if (i > 0 && SEPARATOR_RE.test(arr[i - 1])) return line
-              // 短い行はタイトル・見出し・リスト項目とみなし改行を保持
               if (line.length < shortThreshold) return line + '\n'
-              // 次の行が短い場合も改行を保持
               if (i < arr.length - 1 && arr[i + 1].length < shortThreshold && !SEPARATOR_RE.test(arr[i + 1])) return line + '\n'
               return line
             })
@@ -349,18 +325,69 @@ export function TextEditor({
         )
         .join('\n')
     }
+  }, [result])
 
-    setEditedText(newText)
-    setRedoStack([])
-    setLineBreaksRemoved(true)
-    onTextChange?.(newText)
-  }, [result, displayText, flushUndo, onTextChange])
+  // 改行削除2: 段落区切りも削除（リーダー線は保持）
+  const computeLineBreak2 = useCallback((lb1Text: string): string => {
+    const SEPARATOR_RE = /^────/
+    return lb1Text
+      .split('\n')
+      .map(line => {
+        if (SEPARATOR_RE.test(line)) return '\n' + line + '\n'
+        return line
+      })
+      .join('')
+      .replace(/\n{3,}/g, '\n')
+      .trim()
+  }, [])
+
+  // 改行削除トグル: none → 1 → 2 → none
+  const handleToggleLineBreaks = useCallback(() => {
+    if (!result || !displayText) return
+
+    if (pendingUndoRef.current === null) {
+      pendingUndoRef.current = displayText
+    }
+    flushUndo()
+
+    if (lineBreakMode === 'none') {
+      // none → 1: 元テキストを保存し、改行削除1を適用
+      originalTextRef.current = displayText
+      const lb1 = computeLineBreak1(displayText)
+      lineBreak1TextRef.current = lb1
+      setEditedText(lb1)
+      setRedoStack([])
+      setLineBreakMode('1')
+      onTextChange?.(lb1)
+    } else if (lineBreakMode === '1') {
+      // 1 → 2: 改行削除1の結果から段落区切りも削除
+      const lb1 = lineBreak1TextRef.current ?? displayText
+      const lb2 = computeLineBreak2(lb1)
+      setEditedText(lb2)
+      setRedoStack([])
+      setLineBreakMode('2')
+      onTextChange?.(lb2)
+    } else {
+      // 2 → none: 元テキストに戻す
+      const original = originalTextRef.current
+      if (original !== null) {
+        setEditedText(original)
+        onTextChange?.(original)
+      } else {
+        setEditedText(null)
+      }
+      setRedoStack([])
+      setLineBreakMode('none')
+      originalTextRef.current = null
+      lineBreak1TextRef.current = null
+    }
+  }, [result, displayText, lineBreakMode, flushUndo, onTextChange, computeLineBreak1, computeLineBreak2, setEditedText])
 
   // VFM（Vivliostyle Flavored Markdown）変換
   const handleConvertToVFM = useCallback(async () => {
     if (!aiConnector || !result) return
 
-    if (!lineBreaksRemoved) {
+    if (lineBreakMode === 'none') {
       const msg = lang === 'ja'
         ? 'VFMに変換するには、まず「改行削除」ボタンを押してください。'
         : 'Please press "Remove LB" first before converting to VFM.'
@@ -408,7 +435,7 @@ Rules:
     } finally {
       setVfmState('idle')
     }
-  }, [aiConnector, aiConnectionStatus, lang, result, displayText, lineBreaksRemoved, flushUndo, onTextChange])
+  }, [aiConnector, aiConnectionStatus, lang, result, displayText, lineBreakMode, flushUndo, onTextChange])
 
   // 除外ブロック領域を白で塗りつぶした画像を生成
   const maskExcludedRegions = useCallback((dataUrl: string, rects: Array<{ x: number; y: number; width: number; height: number }>): Promise<string> => {
@@ -669,11 +696,17 @@ Rules:
           </button>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={handleRemoveLineBreaks}
+            onClick={handleToggleLineBreaks}
             disabled={result.textBlocks.length === 0 && !result.fullText}
-            title={lang === 'ja' ? '段落区切り以外の改行を削除' : 'Remove line breaks (keep paragraph breaks)'}
+            title={lang === 'ja'
+              ? (lineBreakMode === 'none' ? '段落区切りを保持して改行を削除' : lineBreakMode === '1' ? '段落区切りも削除' : '元のテキストに戻す')
+              : (lineBreakMode === 'none' ? 'Remove line breaks (keep paragraphs)' : lineBreakMode === '1' ? 'Remove paragraph breaks too' : 'Restore original text')}
           >
-            {lang === 'ja' ? '改行削除' : 'Remove LB'}
+            {lineBreakMode === 'none'
+              ? (lang === 'ja' ? '改行削除1' : 'LB Remove 1')
+              : lineBreakMode === '1'
+                ? (lang === 'ja' ? '改行削除2' : 'LB Remove 2')
+                : (lang === 'ja' ? '改行戻す' : 'Restore LB')}
           </button>
           <button
             className="btn btn-secondary btn-sm"
@@ -689,13 +722,8 @@ Rules:
               : lang === 'ja' ? 'コピー' : 'Copy'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleDownload}>
-            TXT
+            {lang === 'ja' ? '保存' : 'Save'}
           </button>
-          {hasBatchResults && onBatchTextExport && (
-            <button className="btn btn-secondary btn-sm" onClick={onBatchTextExport}>
-              {lang === 'ja' ? '一括TXT' : 'Batch TXT'}
-            </button>
-          )}
         </div>
       </div>
 

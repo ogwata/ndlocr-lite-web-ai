@@ -238,38 +238,7 @@ export default function App() {
     e.target.value = ''
   }, [appendFiles])
 
-  // 一括テキスト出力
-  const handleBatchTextExport = useCallback(() => {
-    const indices = resultSelectedIndices.size > 0
-      ? Array.from(resultSelectedIndices).sort((a, b) => a - b)
-      : sessionResults.map((_, i) => i)
 
-    const parts: string[] = []
-    for (const i of indices) {
-      const result = sessionResults[i]
-      if (!result) continue
-      const img = processedImages[i]
-      const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
-      const line = `──────────── ${label} ────────────`
-      const excluded = excludedBlocksMap[result.id] ?? new Set<number>()
-      const text = result.textBlocks
-        .filter(b => !excluded.has(b.readingOrder))
-        .slice()
-        .sort((a, b) => a.readingOrder - b.readingOrder)
-        .map(b => b.text)
-        .join('\n')
-      parts.push(line + '\n' + text)
-    }
-
-    const output = parts.join('\n\n')
-    const blob = new Blob([output], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'ocr-batch-result.txt'
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [resultSelectedIndices, sessionResults, processedImages, excludedBlocksMap])
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
@@ -1112,8 +1081,6 @@ export default function App() {
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
                     aiConnectionStatus={aiConnectionStatus}
                     imageDataUrl={currentResult?.imageDataUrl}
-                    onBatchTextExport={handleBatchTextExport}
-                    hasBatchResults={sessionResults.length > 1}
                     isMergedMode={isMergedMode}
                     mergedCount={resultSelectedIndices.size}
                     onMergedEditChange={setMergedEditDirty}
