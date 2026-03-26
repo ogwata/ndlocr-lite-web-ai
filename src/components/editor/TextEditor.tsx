@@ -236,11 +236,7 @@ export function TextEditor({
 
   // 改行削除（段落区切りのみ保持）
   const handleRemoveLineBreaks = useCallback(() => {
-    if (!result) return
-    const blocks = result.textBlocks
-      .slice()
-      .sort((a, b) => a.readingOrder - b.readingOrder)
-    if (blocks.length === 0) return
+    if (!result || !displayText) return
 
     // undo用にスナップショットを保存
     if (pendingUndoRef.current === null) {
@@ -248,34 +244,57 @@ export function TextEditor({
     }
     flushUndo()
 
-    const lines = displayText.split('\n')
-    // ブロック間の間隔から段落区切りを判定
-    const paragraphBreaks = new Set<number>()
-    for (let i = 0; i < blocks.length - 1; i++) {
-      const current = blocks[i]
-      const next = blocks[i + 1]
-      const gap = next.y - (current.y + current.height)
-      const avgHeight = (current.height + next.height) / 2
-      if (gap > avgHeight * 0.5) {
-        paragraphBreaks.add(i)
-      }
-    }
-    // 最終行の後も段落区切り
-    paragraphBreaks.add(blocks.length - 1)
+    const blocks = result.textBlocks
+      .slice()
+      .sort((a, b) => a.readingOrder - b.readingOrder)
 
-    // 行を結合（段落区切り以外の改行を削除）
-    const parts: string[] = []
-    let currentParagraph = ''
-    for (let i = 0; i < lines.length; i++) {
-      currentParagraph += lines[i]
-      if (paragraphBreaks.has(i)) {
-        parts.push(currentParagraph)
-        currentParagraph = ''
+    let newText: string
+    if (blocks.length > 0) {
+      // ブロック座標がある場合: 間隔から段落区切りを判定
+      const lines = displayText.split('\n')
+      const paragraphBreaks = new Set<number>()
+      for (let i = 0; i < blocks.length - 1; i++) {
+        const current = blocks[i]
+        const next = blocks[i + 1]
+        const gap = next.y - (current.y + current.height)
+        const avgHeight = (current.height + next.height) / 2
+        if (gap > avgHeight * 0.5) {
+          paragraphBreaks.add(i)
+        }
       }
-    }
-    if (currentParagraph) parts.push(currentParagraph)
+      paragraphBreaks.add(blocks.length - 1)
 
-    const newText = parts.join('\n')
+      const parts: string[] = []
+      let currentParagraph = ''
+      for (let i = 0; i < lines.length; i++) {
+        currentParagraph += lines[i]
+        if (paragraphBreaks.has(i)) {
+          parts.push(currentParagraph)
+          currentParagraph = ''
+        }
+      }
+      if (currentParagraph) parts.push(currentParagraph)
+      newText = parts.join('\n')
+    } else {
+      // ブロック座標がない場合（結合モード等）: 空行を段落区切り、リーダー線も保持
+      const SEPARATOR_RE = /^────/
+      newText = displayText
+        .split('\n\n')
+        .map(paragraph =>
+          paragraph
+            .split('\n')
+            .map((line, i, arr) => {
+              // リーダー線は独立行として保持
+              if (SEPARATOR_RE.test(line)) return line + '\n'
+              // リーダー線の直後の行はそのまま
+              if (i > 0 && SEPARATOR_RE.test(arr[i - 1])) return line
+              return line
+            })
+            .join('')
+        )
+        .join('\n')
+    }
+
     setEditedText(newText)
     setRedoStack([])
     onTextChange?.(newText)
