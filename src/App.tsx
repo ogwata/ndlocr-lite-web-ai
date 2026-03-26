@@ -315,6 +315,26 @@ export default function App() {
   const isMergedMode = mergedResult !== null
   const editorResult = isMergedMode ? mergedResult : currentResult
 
+  // 結合モード用: 各セクションの画像URL・テキスト・ラベル
+  const mergedSections = useMemo(() => {
+    if (resultSelectedIndices.size < 2) return undefined
+    const indices = Array.from(resultSelectedIndices).sort((a, b) => a - b)
+    return indices
+      .map(i => {
+        const result = sessionResults[i]
+        if (!result) return null
+        const img = processedImages[i]
+        const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
+        const text = result.textBlocks
+          .slice()
+          .sort((a, b) => a.readingOrder - b.readingOrder)
+          .map(b => b.text)
+          .join('\n')
+        return { imageDataUrl: result.imageDataUrl, text, label }
+      })
+      .filter((s): s is { imageDataUrl: string; text: string; label: string } => s !== null)
+  }, [resultSelectedIndices, sessionResults, processedImages])
+
   const selectedPageBlockText = useMemo(() => {
     if (!selectedPageBlock || !currentResult) return null
     const cx = (b: TextBlock) => b.x + b.width / 2
@@ -952,6 +972,7 @@ export default function App() {
                     isMergedMode={isMergedMode}
                     mergedCount={resultSelectedIndices.size}
                     onMergedEditChange={setMergedEditDirty}
+                    mergedSections={mergedSections}
                   />
                 }
               />

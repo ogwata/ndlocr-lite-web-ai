@@ -20,6 +20,7 @@ interface TextEditorProps {
   isMergedMode?: boolean
   mergedCount?: number
   onMergedEditChange?: (dirty: boolean) => void
+  mergedSections?: Array<{ imageDataUrl: string; text: string; label: string }>
 }
 
 type ProofreadState =
@@ -47,6 +48,7 @@ export function TextEditor({
   isMergedMode,
   mergedCount,
   onMergedEditChange,
+  mergedSections,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -237,11 +239,32 @@ export function TextEditor({
     const textToProofread = editedText ?? result.fullText
     setProofreadState({ status: 'loading' })
     try {
-      const proofResult = await aiConnector.proofread(textToProofread, imageDataUrl ?? '')
+      let correctedText: string
+
+      if (isMergedMode && mergedSections && mergedSections.length > 0) {
+        // 結合モード: 各セクションを並列にAI校正し、リーダー線で再結合
+        const results = await Promise.all(
+          mergedSections.map(section =>
+            aiConnector.proofread(section.text, section.imageDataUrl)
+          )
+        )
+        correctedText = results
+          .map((r, i) => {
+            const label = mergedSections[i].label
+            const line = `──────────── ${label} ────────────`
+            return line + '\n' + r.correctedText
+          })
+          .join('\n\n')
+      } else {
+        // 単一モード: 従来通り
+        const proofResult = await aiConnector.proofread(textToProofread, imageDataUrl ?? '')
+        correctedText = proofResult.correctedText
+      }
+
       setProofreadState({
         status: 'done',
         originalText: textToProofread,
-        correctedText: proofResult.correctedText,
+        correctedText,
       })
     } catch (err) {
       setProofreadState({
@@ -249,7 +272,7 @@ export function TextEditor({
         message: err instanceof Error ? err.message : String(err),
       })
     }
-  }, [aiConnector, aiConnectionStatus, lang, result, editedText, imageDataUrl])
+  }, [aiConnector, aiConnectionStatus, lang, result, editedText, imageDataUrl, isMergedMode, mergedSections])
 
   // 校正結果を全て適用
   const handleAcceptAll = useCallback(() => {
