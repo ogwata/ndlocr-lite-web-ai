@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import type { OCRResult, TextBlock } from '../../types/ocr'
+import type { OCRResult } from '../../types/ocr'
 import type { AIConnector } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
@@ -8,7 +8,9 @@ import type { Language } from '../../i18n'
 
 interface TextEditorProps {
   result: OCRResult | null
-  selectedBlock: TextBlock | null
+  selectedBlocksInfo?: { count: number; text: string; hasExcluded: boolean; hasNonExcluded: boolean } | null
+  onExcludeBlocks?: () => void
+  onRestoreBlocks?: () => void
   selectedPageBlockText: string | null
   lang: Language
   onTextChange?: (text: string) => void
@@ -36,7 +38,9 @@ interface SearchMatch {
 
 export function TextEditor({
   result,
-  selectedBlock,
+  selectedBlocksInfo,
+  onExcludeBlocks,
+  onRestoreBlocks,
   selectedPageBlockText,
   lang,
   onTextChange,
@@ -549,12 +553,24 @@ export function TextEditor({
           <div className="text-editor-selection-text">{selectedPageBlockText || '(空)'}</div>
         </div>
       )}
-      {selectedBlock && selectedPageBlockText == null && (
+      {selectedBlocksInfo && selectedPageBlockText == null && (
         <div className="text-editor-selection">
           <div className="text-editor-selection-label">
-            {lang === 'ja' ? '選択領域のテキスト:' : 'Selected region:'}
+            {lang === 'ja'
+              ? `選択ブロック (${selectedBlocksInfo.count}件):`
+              : `Selected blocks (${selectedBlocksInfo.count}):`}
+            {selectedBlocksInfo.hasNonExcluded && onExcludeBlocks && (
+              <button className="btn btn-secondary btn-sm text-editor-exclude-btn" onClick={onExcludeBlocks}>
+                {lang === 'ja' ? '除外' : 'Exclude'}
+              </button>
+            )}
+            {selectedBlocksInfo.hasExcluded && onRestoreBlocks && (
+              <button className="btn btn-secondary btn-sm text-editor-restore-btn" onClick={onRestoreBlocks}>
+                {lang === 'ja' ? '復活' : 'Restore'}
+              </button>
+            )}
           </div>
-          <div className="text-editor-selection-text">{selectedBlock.text || '(空)'}</div>
+          <div className="text-editor-selection-text">{selectedBlocksInfo.text || '(空)'}</div>
         </div>
       )}
 

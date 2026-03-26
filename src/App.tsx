@@ -71,8 +71,10 @@ export default function App() {
 
   const [sessionResults, setSessionResults] = useState<OCRResult[]>([])
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
-  const [selectedBlock, setSelectedBlock] = useState<TextBlock | null>(null)
+  const [selectedBlocks, setSelectedBlocks] = useState<Set<number>>(new Set())
+  const lastBlockClickRef = useRef<number>(-1)
   const [selectedPageBlock, setSelectedPageBlock] = useState<PageBlock | null>(null)
+  const [excludedBlocksMap, setExcludedBlocksMap] = useState<Record<string, Set<number>>>({})
   const [showHistory, setShowHistory] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -164,7 +166,7 @@ export default function App() {
 
     if (sessionResults[index]) {
       setSelectedResultIndex(index)
-      setSelectedBlock(null)
+      setSelectedBlocks(new Set())
       setSelectedRegion(null)
     }
   }, [sessionResults, resultSelectedIndices.size, mergedEditDirty, lang])
@@ -189,7 +191,7 @@ export default function App() {
     clearImages()
     setSessionResults([])
     setSelectedResultIndex(0)
-    setSelectedBlock(null)
+    setSelectedBlocks(new Set())
     setSelectedPageBlock(null)
     setSelectedRegion(null)
     setPreprocessedUrls({})
@@ -283,6 +285,94 @@ export default function App() {
 
   const currentResult = sessionResults[selectedResultIndex] ?? null
 
+  // 除外ブロック管理
+  const currentExcludedBlocks = useMemo(
+    () => currentResult ? (excludedBlocksMap[currentResult.id] ?? new Set<number>()) : new Set<number>(),
+    [currentResult, excludedBlocksMap]
+  )
+
+  // 除外ブロックを反映した結果（単一表示用）
+  const effectiveResult = useMemo<OCRResult | null>(() => {
+    if (!currentResult || currentExcludedBlocks.size === 0) return currentResult
+    const filteredBlocks = currentResult.textBlocks.filter(b => !currentExcludedBlocks.has(b.readingOrder))
+    return {
+      ...currentResult,
+      textBlocks: filteredBlocks,
+      fullText: filteredBlocks
+        .slice()
+        .sort((a, b) => a.readingOrder - b.readingOrder)
+        .map(b => b.text)
+        .join('\n'),
+    }
+  }, [currentResult, currentExcludedBlocks])
+
+  // ブロッククリックハンドラ（Cmd/Ctrl+クリック、Shift+クリック対応）
+  const handleBlockClick = useCallback((readingOrder: number, e: React.MouseEvent) => {
+    const isMetaKey = e.metaKey || e.ctrlKey
+
+    if (isMetaKey) {
+      setSelectedBlocks(prev => {
+        const next = new Set(prev)
+        if (next.has(readingOrder)) next.delete(readingOrder)
+        else next.add(readingOrder)
+        return next
+      })
+      lastBlockClickRef.current = readingOrder
+    } else if (e.shiftKey && lastBlockClickRef.current >= 0) {
+      const start = Math.min(lastBlockClickRef.current, readingOrder)
+      const end = Math.max(lastBlockClickRef.current, readingOrder)
+      setSelectedBlocks(prev => {
+        const next = new Set(prev)
+        if (currentResult) {
+          for (const b of currentResult.textBlocks) {
+            if (b.readingOrder >= start && b.readingOrder <= end) next.add(b.readingOrder)
+          }
+        }
+        return next
+      })
+    } else {
+      setSelectedBlocks(new Set([readingOrder]))
+      lastBlockClickRef.current = readingOrder
+    }
+    setSelectedPageBlock(null)
+  }, [currentResult])
+
+  // 選択ブロックを除外
+  const handleExcludeBlocks = useCallback(() => {
+    if (!currentResult || selectedBlocks.size === 0) return
+    setExcludedBlocksMap(prev => {
+      const current = prev[currentResult.id] ?? new Set<number>()
+      return { ...prev, [currentResult.id]: new Set([...current, ...selectedBlocks]) }
+    })
+    setSelectedBlocks(new Set())
+  }, [currentResult, selectedBlocks])
+
+  // 除外ブロックを復活
+  const handleRestoreBlocks = useCallback(() => {
+    if (!currentResult || selectedBlocks.size === 0) return
+    setExcludedBlocksMap(prev => {
+      const current = prev[currentResult.id] ?? new Set<number>()
+      const next = new Set(current)
+      for (const ro of selectedBlocks) next.delete(ro)
+      return { ...prev, [currentResult.id]: next }
+    })
+    setSelectedBlocks(new Set())
+  }, [currentResult, selectedBlocks])
+
+  // 選択中のブロック情報
+  const selectedBlocksInfo = useMemo(() => {
+    if (selectedBlocks.size === 0 || !currentResult) return null
+    const blocks = currentResult.textBlocks.filter(b => selectedBlocks.has(b.readingOrder))
+    const hasExcluded = blocks.some(b => currentExcludedBlocks.has(b.readingOrder))
+    const hasNonExcluded = blocks.some(b => !currentExcludedBlocks.has(b.readingOrder))
+    const text = blocks
+      .slice()
+      .sort((a, b) => a.readingOrder - b.readingOrder)
+      .map(b => b.text)
+      .join('\n')
+    return { count: blocks.length, text, hasExcluded, hasNonExcluded }
+  }, [selectedBlocks, currentResult, currentExcludedBlocks])
+
   // 結合表示用の仮想OCRResult
   const mergedResult = useMemo<OCRResult | null>(() => {
     if (resultSelectedIndices.size < 2) return null
@@ -313,7 +403,7 @@ export default function App() {
   }, [resultSelectedIndices, sessionResults, processedImages])
 
   const isMergedMode = mergedResult !== null
-  const editorResult = isMergedMode ? mergedResult : currentResult
+  const editorResult = isMergedMode ? mergedResult : effectiveResult
 
   // 結合モード用: 各セクションの画像URL・テキスト・ラベル
   const mergedSections = useMemo(() => {
@@ -564,7 +654,7 @@ export default function App() {
     clearImages()
     setSessionResults([])
     setSelectedResultIndex(0)
-    setSelectedBlock(null)
+    setSelectedBlocks(new Set())
     setSelectedPageBlock(null)
     setSelectedRegion(null)
     setPreprocessedUrls({})
@@ -577,7 +667,7 @@ export default function App() {
   // 領域選択ハンドラ（選択範囲を保持するだけ、即座にOCRしない）
   const handleRegionSelect = useCallback((bbox: BoundingBox) => {
     setSelectedRegion(bbox)
-    setSelectedBlock(null)
+    setSelectedBlocks(new Set())
     setSelectedPageBlock(null)
   }, [])
 
@@ -598,7 +688,7 @@ export default function App() {
     }))
     setSessionResults(restoredResults)
     setSelectedResultIndex(0)
-    setSelectedBlock(null)
+    setSelectedBlocks(new Set())
     setSelectedPageBlock(null)
     setSelectedRegion(null)
     setShowHistory(false)
@@ -619,7 +709,7 @@ export default function App() {
     <div className="result-page-nav">
       <button
         className="btn-nav"
-        onClick={() => { setIndex((prev) => prev - 1); setSelectedBlock(null); setSelectedPageBlock(null); setSelectedRegion(null) }}
+        onClick={() => { setIndex((prev) => prev - 1); setSelectedBlocks(new Set()); setSelectedPageBlock(null); setSelectedRegion(null) }}
         disabled={index === 0}
         title={lang === 'ja' ? '前のファイル' : 'Previous file'}
       >←</button>
@@ -628,7 +718,7 @@ export default function App() {
         value={index}
         onChange={(e) => {
           setIndex(() => Number(e.target.value))
-          setSelectedBlock(null)
+          setSelectedBlocks(new Set())
           setSelectedPageBlock(null)
           setSelectedRegion(null)
         }}
@@ -644,7 +734,7 @@ export default function App() {
       </select>
       <button
         className="btn-nav"
-        onClick={() => { setIndex((prev) => prev + 1); setSelectedBlock(null); setSelectedPageBlock(null); setSelectedRegion(null) }}
+        onClick={() => { setIndex((prev) => prev + 1); setSelectedBlocks(new Set()); setSelectedPageBlock(null); setSelectedRegion(null) }}
         disabled={index >= maxIndex}
         title={lang === 'ja' ? '次のファイル' : 'Next file'}
       >→</button>
@@ -771,8 +861,8 @@ export default function App() {
                 <ImageViewer
                   imageDataUrl={preprocessedUrls[pendingImageIndex] ?? pendingDataUrls[pendingImageIndex] ?? ''}
                   textBlocks={[]}
-                  selectedBlock={null}
-                  onBlockSelect={() => {}}
+                  selectedBlocks={new Set()}
+                  onBlockClick={() => {}}
                   onRegionSelect={handleRegionSelect}
                   selectedRegion={selectedRegion}
                 />
@@ -918,13 +1008,14 @@ export default function App() {
                         <ImageViewer
                           imageDataUrl={preprocessedUrls[selectedResultIndex + 10000] ?? currentResult.imageDataUrl}
                           textBlocks={currentResult.textBlocks}
-                          selectedBlock={selectedBlock}
-                          onBlockSelect={(block) => { setSelectedBlock(block); setSelectedPageBlock(null) }}
+                          selectedBlocks={selectedBlocks}
+                          excludedBlocks={currentExcludedBlocks}
+                          onBlockClick={handleBlockClick}
                           onRegionSelect={handleRegionSelect}
                           selectedRegion={selectedRegion}
                           pageBlocks={currentResult.pageBlocks}
                           selectedPageBlock={selectedPageBlock}
-                          onPageBlockSelect={(block) => { setSelectedPageBlock(block); setSelectedBlock(null) }}
+                          onPageBlockSelect={(block) => { setSelectedPageBlock(block); setSelectedBlocks(new Set()) }}
                           pageIndex={selectedResultIndex}
                           totalPages={processedImages.length}
                         />
@@ -961,7 +1052,9 @@ export default function App() {
                 right={
                   <TextEditor
                     result={editorResult}
-                    selectedBlock={isMergedMode ? null : selectedBlock}
+                    selectedBlocksInfo={isMergedMode ? null : selectedBlocksInfo}
+                    onExcludeBlocks={handleExcludeBlocks}
+                    onRestoreBlocks={handleRestoreBlocks}
                     selectedPageBlockText={isMergedMode ? null : selectedPageBlockText}
                     lang={lang}
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}

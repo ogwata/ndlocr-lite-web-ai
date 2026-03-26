@@ -4,8 +4,9 @@ import type { TextBlock, BoundingBox, PageBlock } from '../../types/ocr'
 interface ImageViewerProps {
   imageDataUrl: string
   textBlocks: TextBlock[]
-  selectedBlock: TextBlock | null
-  onBlockSelect: (block: TextBlock) => void
+  selectedBlocks: Set<number>
+  excludedBlocks?: Set<number>
+  onBlockClick: (readingOrder: number, e: React.MouseEvent) => void
   onRegionSelect?: (bbox: BoundingBox) => void
   selectedRegion?: BoundingBox | null
   pageBlocks?: PageBlock[]
@@ -24,8 +25,9 @@ type InteractionMode = 'pan' | 'select'
 export function ImageViewer({
   imageDataUrl,
   textBlocks,
-  selectedBlock,
-  onBlockSelect,
+  selectedBlocks,
+  excludedBlocks,
+  onBlockClick,
   onRegionSelect,
   selectedRegion,
   pageBlocks,
@@ -410,13 +412,13 @@ export function ImageViewer({
               return (
                 <div
                   key={i}
-                  className={`region-box ${selectedBlock === block ? 'selected' : ''} ${showTextOverlay ? 'region-box-text-overlay' : ''}`}
+                  className={`region-box ${selectedBlocks.has(block.readingOrder) ? 'selected' : ''} ${excludedBlocks?.has(block.readingOrder) ? 'excluded' : ''} ${showTextOverlay ? 'region-box-text-overlay' : ''}`}
                   style={{
                     left: block.x * scaleX, top: block.y * scaleY,
                     width: block.width * scaleX, height: block.height * scaleY,
                     ...confidenceStyle,
                   }}
-                  onClick={() => onBlockSelect(block)}
+                  onClick={(e) => onBlockClick(block.readingOrder, e)}
                   title={titleText}
                 >
                   {showTextOverlay && (
