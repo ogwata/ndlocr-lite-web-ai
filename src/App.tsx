@@ -48,7 +48,7 @@ function cropRegion(srcDataUrl: string, bbox: BoundingBox) {
 export default function App() {
   const { lang, toggleLanguage } = useI18n()
   const { isReady, jobState, processImage, processRegion, resetState, ensureLanguage } = useOCRWorker()
-  const { processedImages, isLoading: isLoadingFiles, processFiles, clearImages, fileLoadingState } = useFileProcessor()
+  const { processedImages, isLoading: isLoadingFiles, processFiles, clearImages, removeImages, fileLoadingState } = useFileProcessor()
   const { runs: historyRuns, saveRun, clearResults } = useResultCache()
   const {
     settings: aiSettings,
@@ -119,6 +119,15 @@ export default function App() {
     setPendingImageIndex(index)
     setSelectedRegion(null)
   }, [])
+
+  // 選択画像の削除
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIndices.size === 0) return
+    removeImages(selectedIndices)
+    setSelectedIndices(new Set())
+    // preprocessedUrls もインデックスがずれるのでクリア
+    setPreprocessedUrls({})
+  }, [selectedIndices, removeImages])
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
@@ -549,7 +558,14 @@ export default function App() {
                 ))}
                 {selectedIndices.size > 0 && (
                   <div className="result-sidebar-selection-info">
-                    {selectedIndices.size}/{processedImages.length}
+                    <span>{selectedIndices.size}/{processedImages.length}</span>
+                    <button
+                      className="sidebar-delete-btn"
+                      onClick={handleDeleteSelected}
+                      title={lang === 'ja' ? '選択画像を削除' : 'Delete selected'}
+                    >
+                      🗑
+                    </button>
                   </div>
                 )}
               </div>

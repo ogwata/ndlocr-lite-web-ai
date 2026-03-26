@@ -607,11 +607,30 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
 }
 .result-sidebar-item.selected .result-sidebar-label { color: var(--color-primary); }
 .result-sidebar-selection-info {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   font-size: 0.7rem;
   color: var(--color-text-secondary);
   padding: 0.25rem;
   border-top: 1px solid var(--color-border-light);
+}
+.sidebar-delete-btn {
+  background: none;
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-delete-btn:hover {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #e74c3c;
 }
 .result-sidebar-item.sidebar-pending { opacity: 0.45; cursor: default; }
 .result-sidebar-item.sidebar-pending:hover { background: transparent; }

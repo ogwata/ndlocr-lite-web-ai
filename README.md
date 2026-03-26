@@ -44,7 +44,7 @@
 1. 設定（⚙️）からAI接続を構成（プロバイダ選択、APIキー入力、モデル選択）
 2. 「接続テスト」で接続を確認（ヘッダーに「AI接続済み」と表示される）
 3. OCR結果画面で「AI校正」ボタンをクリック（接続テスト未実施の場合は警告が表示されます）
-4. AIが元画像とOCRテキストを比較し、修正テキストを返却
+4. AIが元画像とOCRテキストを比較し、修正テキストを出力
 5. 差分がインラインハイライトで表示（削除＝赤背景、追加＝緑背景）
 6. 各修正箇所の ✓（適用）/ ✗（却下）ボタンで個別に判断（ctrl+zで取り消し可能）、または「全て適用」「全て却下」
 
@@ -170,7 +170,7 @@ npm run mcp-server
 | NDLOCR-Lite（OCRモデル・アルゴリズム） | CC BY 4.0 | 国立国会図書館 |
 | ndlocrlite-web（Web移植コード） | LICENSEファイルに準拠 | 橋本雄太氏 |
 | NDLOCR-Lite Web AI（本プロジェクトの追加コード） | MIT License | 小形 |
-| UI拡張機能（ダークモード、画像前処理、多言語UI等） | MIT License | [宮川創](https://researchmap.jp/SoMiyagawa)（筑波大学） |
+| UI拡張機能（ダークモード、画像前処理、多言語UI等） | MIT License | [宮川創氏](https://researchmap.jp/SoMiyagawa)（筑波大学） |
 
 ## 帰属・クレジット
 
@@ -184,6 +184,10 @@ npm run mcp-server
 - **ndlocr-lite-web-ai-deluxe:** [somiyagawa/ndlocr-lite-web-ai-deluxe](https://github.com/somiyagawa/ndlocr-lite-web-ai-deluxe)（宮川創氏） — 画像前処理、ダークモード、多言語UI、縦書き表示等
 
 ## 変更履歴
+
+### v0.6.2（2026-03-26）
+
+- feat: サイドバーで選択した画像を個別削除できるボタンを追加
 
 ### v0.6.1（2026-03-26）
 

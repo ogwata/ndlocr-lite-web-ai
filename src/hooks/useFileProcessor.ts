@@ -53,5 +53,9 @@ export function useFileProcessor() {
     setError(null)
   }, [])
 
-  return { processedImages, isLoading, error, processFiles, clearImages, fileLoadingState }
+  const removeImages = useCallback((indices: Set<number>) => {
+    setProcessedImages(prev => prev.filter((_, i) => !indices.has(i)))
+  }, [])
+
+  return { processedImages, isLoading, error, processFiles, clearImages, removeImages, fileLoadingState }
 }
