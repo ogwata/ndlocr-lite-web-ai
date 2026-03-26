@@ -3,8 +3,6 @@ import type { OCRResult, TextBlock } from '../../types/ocr'
 import type { AIConnector } from '../../types/ai'
 import type { AIConnectionStatus } from '../../hooks/useAISettings'
 import { downloadText, copyToClipboard } from '../../utils/textExport'
-import { downloadTEI } from '../../utils/exportTEI'
-import { downloadHOCR } from '../../utils/exportHOCR'
 import { DiffView } from './DiffView'
 import type { Language } from '../../i18n'
 
@@ -17,6 +15,8 @@ interface TextEditorProps {
   aiConnector: AIConnector | null
   aiConnectionStatus?: AIConnectionStatus
   imageDataUrl?: string
+  onBatchTextExport?: () => void
+  hasBatchResults?: boolean
 }
 
 type ProofreadState =
@@ -39,6 +39,8 @@ export function TextEditor({
   aiConnector,
   aiConnectionStatus = 'disconnected',
   imageDataUrl,
+  onBatchTextExport,
+  hasBatchResults,
 }: TextEditorProps) {
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -399,12 +401,11 @@ export function TextEditor({
           <button className="btn btn-secondary btn-sm" onClick={handleDownload}>
             TXT
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => result && downloadTEI(result)} disabled={!result}>
-            TEI
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => result && downloadHOCR(result)} disabled={!result}>
-            hOCR
-          </button>
+          {hasBatchResults && onBatchTextExport && (
+            <button className="btn btn-secondary btn-sm" onClick={onBatchTextExport}>
+              {lang === 'ja' ? '一括TXT' : 'Batch TXT'}
+            </button>
+          )}
         </div>
       </div>
 

@@ -81,7 +81,9 @@ export default function App() {
   const [isMathProcessing, setIsMathProcessing] = useState(false)
   const [pendingImageIndex, setPendingImageIndex] = useState(0)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
+  const [resultSelectedIndices, setResultSelectedIndices] = useState<Set<number>>(new Set())
   const lastClickedIndexRef = useRef<number>(0)
+  const resultLastClickedIndexRef = useRef<number>(0)
   const cancelRef = useRef(false)
 
   // サイドバーのクリックハンドラ（Cmd/Ctrl+クリック、Shift+クリック対応）
@@ -121,6 +123,43 @@ export default function App() {
     setSelectedRegion(null)
   }, [])
 
+  // 結果サイドバーのクリックハンドラ（Cmd/Ctrl+クリック、Shift+クリック対応）
+  const handleResultSidebarClick = useCallback((index: number, e: React.MouseEvent) => {
+    const isMetaKey = e.metaKey || e.ctrlKey
+
+    if (isMetaKey) {
+      setResultSelectedIndices(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) {
+          next.delete(index)
+        } else {
+          next.add(index)
+        }
+        return next
+      })
+      resultLastClickedIndexRef.current = index
+    } else if (e.shiftKey) {
+      const start = Math.min(resultLastClickedIndexRef.current, index)
+      const end = Math.max(resultLastClickedIndexRef.current, index)
+      setResultSelectedIndices(prev => {
+        const next = new Set(prev)
+        for (let i = start; i <= end; i++) {
+          next.add(i)
+        }
+        return next
+      })
+    } else {
+      setResultSelectedIndices(new Set())
+      resultLastClickedIndexRef.current = index
+    }
+
+    if (sessionResults[index]) {
+      setSelectedResultIndex(index)
+      setSelectedBlock(null)
+      setSelectedRegion(null)
+    }
+  }, [sessionResults])
+
   // サイドバー: 個別画像削除
   const handleRemoveImage = useCallback((index: number) => {
     removeImage(index)
@@ -158,6 +197,37 @@ export default function App() {
     await appendFiles(Array.from(files))
     e.target.value = ''
   }, [appendFiles])
+
+  // 一括テキスト出力
+  const handleBatchTextExport = useCallback(() => {
+    const indices = resultSelectedIndices.size > 0
+      ? Array.from(resultSelectedIndices).sort((a, b) => a - b)
+      : sessionResults.map((_, i) => i)
+
+    const parts: string[] = []
+    for (const i of indices) {
+      const result = sessionResults[i]
+      if (!result) continue
+      const img = processedImages[i]
+      const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
+      const line = `──────────── ${label} ────────────`
+      const text = result.textBlocks
+        .slice()
+        .sort((a, b) => a.readingOrder - b.readingOrder)
+        .map(b => b.text)
+        .join('\n')
+      parts.push(line + '\n' + text)
+    }
+
+    const output = parts.join('\n\n')
+    const blob = new Blob([output], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'ocr-batch-result.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [resultSelectedIndices, sessionResults, processedImages])
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
@@ -713,10 +783,10 @@ export default function App() {
                     const isInProgress = !result && isProcessing && i === sessionResults.length
                     const isPending = !result && !isInProgress
                     return (
-                      <div key={i} className={`result-sidebar-item ${result && i === selectedResultIndex ? 'active' : ''} ${isPending || isInProgress ? 'sidebar-pending' : ''}`}>
+                      <div key={i} className={`result-sidebar-item ${result && i === selectedResultIndex ? 'active' : ''} ${resultSelectedIndices.has(i) ? 'selected' : ''} ${isPending || isInProgress ? 'sidebar-pending' : ''}`}>
                         <button
                           className="result-sidebar-item-btn"
-                          onClick={() => { if (result) { setSelectedResultIndex(i); setSelectedBlock(null); setSelectedRegion(null) } }}
+                          onClick={(e) => { if (result) handleResultSidebarClick(i, e) }}
                           disabled={!result}
                           title={img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
                         >
@@ -836,6 +906,8 @@ export default function App() {
                     aiConnector={getConnector(buildProofreadPrompt(aiSettings.customPrompt, DOCUMENT_LANGUAGE_NAMES[documentLanguage]))}
                     aiConnectionStatus={aiConnectionStatus}
                     imageDataUrl={currentResult?.imageDataUrl}
+                    onBatchTextExport={handleBatchTextExport}
+                    hasBatchResults={sessionResults.length > 1}
                   />
                 }
               />

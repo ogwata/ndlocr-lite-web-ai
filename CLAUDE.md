@@ -11,7 +11,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - 画像前処理（明るさ・コントラスト・シャープネス・二値化・ノイズ除去・傾き補正・湾曲補正・ページ分割・一括適用）
 - ダークモード（OS設定追従）、多言語UI（日英）、縦書き表示モード
 - 数式認識（pix2text-mfr: DeiT encoder + TrOCR decoder、LaTeX出力、MathJax表示）
-- OCR結果のTEI P5 XML / hOCRエクスポート（単一ページ / バッチ）
+- OCR結果の一括テキスト出力（リーダー線＋ファイル名区切り、選択画像 / 全画像対応）
 - ImageViewer表示モード（テキストオーバーレイ・信頼度ヒートマップ・読み順表示）
 - TextEditorのundo/redo（デバウンス付き編集履歴スタック）
 - バッチOCR処理の中断機能
@@ -80,8 +80,8 @@ ndlocr-lite-web-ai/
 │   ├── utils/
 │   │   ├── crypto.ts              # APIキー暗号化（Web Crypto API）
 │   │   ├── imagePreprocess.ts     # 画像前処理ユーティリティ
-│   │   ├── exportTEI.ts           # TEI P5 XMLエクスポート（単一 / バッチ）
-│   │   ├── exportHOCR.ts          # hOCRエクスポート（単一 / バッチ）
+│   │   ├── exportTEI.ts           # TEI P5 XMLエクスポート（未使用、将来削除予定）
+│   │   ├── exportHOCR.ts          # hOCRエクスポート（未使用、将来削除予定）
 │   │   └── dewarp.ts              # 湾曲補正（大津二値化 + ストリップ曲率計測 + バイリニア補間）
 │   ├── worker/
 │   │   ├── math-recognizer.ts     # 数式認識（DeiT encoder + TrOCR decoder + BPEトークナイザー）
@@ -178,7 +178,7 @@ ndlocr-lite-web-ai/
 - テキスト検索・置換機能（Ctrl+F、単一/全置換、マッチナビゲーション）
 - 行番号表示（スクロール同期、縦書き時は上部に右→左で表示）
 - ビューポート高さの70-80%、overflow-y: auto でスクロール可能
-- パネル上部にボタン群: undo/redo、検索、行番号、縦書き切替、「AI校正」（紫グラデーション）「コピー」「TXT」「TEI」「hOCR」（現在表示中のテキスト/OCR結果が対象）
+- パネル上部にボタン群: undo/redo、検索、行番号、縦書き切替、「AI校正」（紫グラデーション）「コピー」「TXT」「一括TXT」（現在表示中のテキスト/OCR結果が対象）
 - AI校正後の差分表示: 削除部分＝赤背景+取消線、追加部分＝緑背景のインライン表示
 - 各修正箇所に✓（適用）/✗（却下）ボタン、ctrl+zでアンドゥ可能
 - 「新しいファイルを処理」クリック時にOCR結果の破棄確認ダイアログを表示
