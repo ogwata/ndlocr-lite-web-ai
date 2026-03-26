@@ -72,6 +72,7 @@ Important instructions:
 - Fix misrecognized punctuation and symbols.
 - Preserve line breaks as they appear in the OCR output.
 - Preserve separator lines (──────────── filename ────────────) exactly as they are. Do not modify or remove them.
+- The OCR text may not cover all text visible in the image. Only proofread the text that is given. Do not add text from the image that is not present in the OCR output.
 - Output only the corrected text. No explanations.`
 
 /** プロンプトに文書言語を埋め込む */
