@@ -63,7 +63,6 @@ export function TextEditor({
   const [editedText, setEditedText] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [includeFileName, setIncludeFileName] = useState(false)
-  const [ignoreNewlines, setIgnoreNewlines] = useState(false)
   const [proofreadState, setProofreadState] = useState<ProofreadState>({ status: 'idle' })
   const [fontSize, setFontSize] = useState(14)
   const [showLineNumbers, setShowLineNumbers] = useState(false)
@@ -72,6 +71,8 @@ export function TextEditor({
   const [replaceQuery, setReplaceQuery] = useState('')
   const [isVertical, setIsVertical] = useState(false)
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const [lineBreaksRemoved, setLineBreaksRemoved] = useState(false)
+  const [vfmState, setVfmState] = useState<'idle' | 'loading'>('idle')
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
@@ -209,13 +210,12 @@ export function TextEditor({
     setProofreadState({ status: 'idle' })
     setUndoStack([])
     setRedoStack([])
+    setLineBreaksRemoved(false)
+    setVfmState('idle')
   }
 
-  const applyOptions = (text: string) =>
-    ignoreNewlines ? text.replace(/\n/g, '') : text
-
   const handleCopy = async () => {
-    const text = applyOptions(displayText)
+    const text = displayText
     try {
       await copyToClipboard(text)
       setCopied(true)
@@ -227,7 +227,7 @@ export function TextEditor({
 
   const handleDownload = () => {
     if (!result) return
-    const text = applyOptions(editedText ?? result.fullText)
+    const text = editedText ?? result.fullText
     downloadText(
       includeFileName ? `=== ${result.fileName} ===\n${text}` : text,
       result.fileName,
@@ -297,8 +297,63 @@ export function TextEditor({
 
     setEditedText(newText)
     setRedoStack([])
+    setLineBreaksRemoved(true)
     onTextChange?.(newText)
   }, [result, displayText, flushUndo, onTextChange])
+
+  // VFM（Vivliostyle Flavored Markdown）変換
+  const handleConvertToVFM = useCallback(async () => {
+    if (!aiConnector || !result) return
+
+    if (!lineBreaksRemoved) {
+      const msg = lang === 'ja'
+        ? 'VFMに変換するには、まず「改行削除」ボタンを押してください。'
+        : 'Please press "Remove LB" first before converting to VFM.'
+      window.alert(msg)
+      return
+    }
+
+    if (aiConnectionStatus !== 'connected') {
+      const msg = lang === 'ja'
+        ? 'AI接続が確認されていません。設定画面で接続テストを実行してください。続行しますか？'
+        : 'AI connection has not been verified. Please run a connection test in Settings. Continue anyway?'
+      if (!window.confirm(msg)) return
+    }
+
+    // undo用にスナップショットを保存
+    if (pendingUndoRef.current === null) {
+      pendingUndoRef.current = displayText
+    }
+    flushUndo()
+
+    setVfmState('loading')
+    try {
+      const vfmPrompt = `Convert the following OCR text to Vivliostyle Flavored Markdown (VFM).
+
+Rules:
+- Detect headings and mark them with # (H1) through ###### (H6) based on context.
+- Detect lists (ordered and unordered) and mark them appropriately.
+- Detect blockquotes and mark them with >.
+- Detect footnotes if present.
+- Preserve the original text content exactly. Do not rephrase, translate, or correct the text.
+- If separator lines (──────────── filename ────────────) are present, preserve them as-is.
+- Output only the converted VFM text. No explanations.`
+
+      const proofResult = await aiConnector.proofread(
+        vfmPrompt + '\n\n---\n\n' + displayText,
+        ''
+      )
+      const newText = proofResult.correctedText
+      setEditedText(newText)
+      setRedoStack([])
+      onTextChange?.(newText)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      window.alert(lang === 'ja' ? `VFM変換エラー: ${msg}` : `VFM conversion error: ${msg}`)
+    } finally {
+      setVfmState('idle')
+    }
+  }, [aiConnector, aiConnectionStatus, lang, result, displayText, lineBreaksRemoved, flushUndo, onTextChange])
 
   // 除外ブロック領域を白で塗りつぶした画像を生成
   const maskExcludedRegions = useCallback((dataUrl: string, rects: Array<{ x: number; y: number; width: number; height: number }>): Promise<string> => {
@@ -552,6 +607,14 @@ export function TextEditor({
           >
             {lang === 'ja' ? '改行削除' : 'Remove LB'}
           </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleConvertToVFM}
+            disabled={!aiConnector || vfmState === 'loading'}
+            title={lang === 'ja' ? 'Vivliostyle Flavored Markdownに変換（AI使用）' : 'Convert to VFM (uses AI)'}
+          >
+            {vfmState === 'loading' ? (lang === 'ja' ? 'VFM変換中...' : 'Converting...') : 'VFM'}
+          </button>
           <button className="btn btn-secondary btn-sm" onClick={handleCopy}>
             {copied
               ? lang === 'ja' ? 'コピーしました！' : 'Copied!'
@@ -759,14 +822,6 @@ export function TextEditor({
               onChange={(e) => setIncludeFileName(e.target.checked)}
             />
             {lang === 'ja' ? 'ファイル名を記載' : 'Include filename'}
-          </label>
-          <label className="text-editor-option">
-            <input
-              type="checkbox"
-              checked={ignoreNewlines}
-              onChange={(e) => setIgnoreNewlines(e.target.checked)}
-            />
-            {lang === 'ja' ? 'コピー/DL時に改行を除去' : 'Remove newlines on copy/download'}
           </label>
         </div>
         <div className="text-editor-font-controls">

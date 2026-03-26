@@ -19,6 +19,7 @@ NDLOCR-Lite Web AI は、国立国会図書館の NDLOCR-Lite をベースにし
 - 複数画像選択時のOCR結果結合表示（リーダー線＋ファイル名区切り、結合状態で編集・AI校正可能）
 - ブロック複数選択（Cmd/Ctrl+クリック、Shift+クリック）と除外/復活機能
 - 改行削除（OCRブロック間隔から段落区切りを判定し、段落内改行のみ削除）
+- VFM変換（AIを使ってOCRテキストをVivliostyle Flavored Markdownに変換、改行削除後に使用可能）
 
 詳細な開発計画は `docs/NDLOCR-Lite-Web-AI-開発計画書.md` を参照。
 
