@@ -559,30 +559,44 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  overflow-y: auto;
   max-height: calc(100vh - 100px);
   position: sticky;
   top: 68px;
   box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+}
+.result-sidebar-list {
+  overflow-y: auto;
+  flex: 1;
 }
 
 .result-sidebar-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 0.5rem;
+  padding: 0;
   background: none;
   border: none;
   border-bottom: 1px solid var(--color-border-light);
   border-radius: 0;
-  cursor: pointer;
   transition: background var(--transition-fast);
-  gap: 0.3rem;
+  position: relative;
 }
 .result-sidebar-item:last-child { border-bottom: none; }
 .result-sidebar-item:hover { background: var(--color-bg); }
 .result-sidebar-item.active { background: var(--color-primary-light); }
+.result-sidebar-item-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  gap: 0.3rem;
+}
 .result-sidebar-item img {
   width: 100%;
   max-width: 120px;
@@ -606,31 +620,59 @@ button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 
   background: var(--color-primary-light);
 }
 .result-sidebar-item.selected .result-sidebar-label { color: var(--color-primary); }
-.result-sidebar-selection-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
+
+/* サイドバー: 個別削除ボタン（×） */
+.sidebar-item-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   font-size: 0.7rem;
-  color: var(--color-text-secondary);
-  padding: 0.25rem;
-  border-top: 1px solid var(--color-border-light);
-}
-.sidebar-delete-btn {
-  background: none;
+  line-height: 18px;
+  text-align: center;
+  background: var(--color-surface);
   border: 1px solid var(--color-border-light);
-  border-radius: 4px;
+  border-radius: 50%;
   cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  font-size: 0.7rem;
-  line-height: 1;
   color: var(--color-text-secondary);
-  transition: background 0.15s, color 0.15s;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.sidebar-delete-btn:hover {
+.result-sidebar-item:hover .sidebar-item-delete { opacity: 1; }
+.sidebar-item-delete:hover {
   background: #e74c3c;
   color: #fff;
   border-color: #e74c3c;
+}
+
+/* サイドバー: 常設ツールバー */
+.sidebar-toolbar {
+  display: flex;
+  border-top: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+.sidebar-toolbar button {
+  flex: 1;
+  padding: 0.35rem;
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-toolbar button:first-child {
+  border-right: 1px solid var(--color-border-light);
+}
+.sidebar-toolbar button:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.sidebar-toolbar button:last-child:hover {
+  background: #e74c3c;
+  color: #fff;
 }
 .result-sidebar-item.sidebar-pending { opacity: 0.45; cursor: default; }
 .result-sidebar-item.sidebar-pending:hover { background: transparent; }

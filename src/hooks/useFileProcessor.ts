@@ -15,7 +15,7 @@ export function useFileProcessor() {
   const [error, setError] = useState<string | null>(null)
   const [fileLoadingState, setFileLoadingState] = useState<FileLoadingState | null>(null)
 
-  const processFiles = useCallback(async (files: File[]) => {
+  const processFilesInternal = useCallback(async (files: File[]) => {
     setIsLoading(true)
     setError(null)
 
@@ -39,23 +39,36 @@ export function useFileProcessor() {
           images.push(img)
         }
       }
-      setProcessedImages(images)
     } catch (err) {
       setError((err as Error).message)
     } finally {
       setIsLoading(false)
       setFileLoadingState(null)
     }
+
+    return images
   }, [])
+
+  const processFiles = useCallback(async (files: File[]) => {
+    const images = await processFilesInternal(files)
+    setProcessedImages(images)
+  }, [processFilesInternal])
+
+  const appendFiles = useCallback(async (files: File[]) => {
+    const images = await processFilesInternal(files)
+    if (images.length > 0) {
+      setProcessedImages(prev => [...prev, ...images])
+    }
+  }, [processFilesInternal])
 
   const clearImages = useCallback(() => {
     setProcessedImages([])
     setError(null)
   }, [])
 
-  const removeImages = useCallback((indices: Set<number>) => {
-    setProcessedImages(prev => prev.filter((_, i) => !indices.has(i)))
+  const removeImage = useCallback((index: number) => {
+    setProcessedImages(prev => prev.filter((_, i) => i !== index))
   }, [])
 
-  return { processedImages, isLoading, error, processFiles, clearImages, removeImages, fileLoadingState }
+  return { processedImages, isLoading, error, processFiles, appendFiles, clearImages, removeImage, fileLoadingState }
 }

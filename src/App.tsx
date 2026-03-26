@@ -48,7 +48,8 @@ function cropRegion(srcDataUrl: string, bbox: BoundingBox) {
 export default function App() {
   const { lang, toggleLanguage } = useI18n()
   const { isReady, jobState, processImage, processRegion, resetState, ensureLanguage } = useOCRWorker()
-  const { processedImages, isLoading: isLoadingFiles, processFiles, clearImages, removeImages, fileLoadingState } = useFileProcessor()
+  const { processedImages, isLoading: isLoadingFiles, processFiles, appendFiles, clearImages, removeImage, fileLoadingState } = useFileProcessor()
+  const addFileInputRef = useRef<HTMLInputElement>(null)
   const { runs: historyRuns, saveRun, clearResults } = useResultCache()
   const {
     settings: aiSettings,
@@ -120,14 +121,43 @@ export default function App() {
     setSelectedRegion(null)
   }, [])
 
-  // 選択画像の削除
-  const handleDeleteSelected = useCallback(() => {
-    if (selectedIndices.size === 0) return
-    removeImages(selectedIndices)
-    setSelectedIndices(new Set())
-    // preprocessedUrls もインデックスがずれるのでクリア
+  // サイドバー: 個別画像削除
+  const handleRemoveImage = useCallback((index: number) => {
+    removeImage(index)
     setPreprocessedUrls({})
-  }, [selectedIndices, removeImages])
+    // 結果画面の場合、sessionResultsも連動削除
+    setSessionResults(prev => {
+      if (prev.length === 0) return prev
+      return prev.filter((_, i) => i !== index)
+    })
+  }, [removeImage])
+
+  // サイドバー: 全画像削除
+  const handleClearAllImages = useCallback(() => {
+    const msg = lang === 'ja'
+      ? 'すべての画像を削除しますか？'
+      : 'Delete all images?'
+    if (!window.confirm(msg)) return
+    clearImages()
+    setSessionResults([])
+    setSelectedResultIndex(0)
+    setSelectedBlock(null)
+    setSelectedPageBlock(null)
+    setSelectedRegion(null)
+    setPreprocessedUrls({})
+    resetState()
+    setIsProcessing(false)
+    setIsReadyToProcess(false)
+    setPendingImageIndex(0)
+  }, [lang, clearImages, resetState])
+
+  // サイドバー: 画像追加
+  const handleAddFiles = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    await appendFiles(Array.from(files))
+    e.target.value = ''
+  }, [appendFiles])
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
@@ -543,31 +573,32 @@ export default function App() {
           <section className="result-section">
             {processedImages.length > 1 && (
               <div className="result-sidebar">
-                {processedImages.map((img, i) => (
-                  <button
-                    key={i}
-                    className={`result-sidebar-item ${i === pendingImageIndex ? 'active' : ''} ${selectedIndices.has(i) ? 'selected' : ''}`}
-                    onClick={(e) => handleSidebarClick(i, e)}
-                    title={img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
-                  >
-                    <img src={img.thumbnailDataUrl} alt={img.fileName} />
-                    <span className="result-sidebar-label">
-                      {img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
-                    </span>
-                  </button>
-                ))}
-                {selectedIndices.size > 0 && (
-                  <div className="result-sidebar-selection-info">
-                    <span>{selectedIndices.size}/{processedImages.length}</span>
-                    <button
-                      className="sidebar-delete-btn"
-                      onClick={handleDeleteSelected}
-                      title={lang === 'ja' ? '選択画像を削除' : 'Delete selected'}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                )}
+                <div className="result-sidebar-list">
+                  {processedImages.map((img, i) => (
+                    <div key={i} className={`result-sidebar-item ${i === pendingImageIndex ? 'active' : ''} ${selectedIndices.has(i) ? 'selected' : ''}`}>
+                      <button
+                        className="result-sidebar-item-btn"
+                        onClick={(e) => handleSidebarClick(i, e)}
+                        title={img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
+                      >
+                        <img src={img.thumbnailDataUrl} alt={img.fileName} />
+                        <span className="result-sidebar-label">
+                          {img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
+                        </span>
+                      </button>
+                      <button
+                        className="sidebar-item-delete"
+                        onClick={() => handleRemoveImage(i)}
+                        title={lang === 'ja' ? '削除' : 'Delete'}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="sidebar-toolbar">
+                  <button onClick={() => addFileInputRef.current?.click()} title={lang === 'ja' ? '画像を追加' : 'Add images'}>＋</button>
+                  <button onClick={handleClearAllImages} title={lang === 'ja' ? '全削除' : 'Delete all'}>🗑</button>
+                </div>
+                <input ref={addFileInputRef} type="file" accept="image/*,.pdf,.tiff,.tif,.heic,.heif" multiple hidden onChange={handleAddFiles} />
               </div>
             )}
 
@@ -676,28 +707,41 @@ export default function App() {
             {/* 左サイドバー: 全ファイル一覧 */}
             {processedImages.length > 1 && (
               <div className="result-sidebar">
-                {processedImages.map((img, i) => {
-                  const result = sessionResults[i]
-                  const isInProgress = !result && isProcessing && i === sessionResults.length
-                  const isPending = !result && !isInProgress
-                  return (
-                    <button
-                      key={i}
-                      className={`result-sidebar-item ${result && i === selectedResultIndex ? 'active' : ''} ${isPending || isInProgress ? 'sidebar-pending' : ''}`}
-                      onClick={() => { if (result) { setSelectedResultIndex(i); setSelectedBlock(null); setSelectedRegion(null) } }}
-                      disabled={!result}
-                      title={img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
-                    >
-                      <div className="result-sidebar-thumb-wrap">
-                        <img src={result ? result.imageDataUrl : img.thumbnailDataUrl} alt={img.fileName} />
-                        {isInProgress && <div className="sidebar-item-spinner" />}
+                <div className="result-sidebar-list">
+                  {processedImages.map((img, i) => {
+                    const result = sessionResults[i]
+                    const isInProgress = !result && isProcessing && i === sessionResults.length
+                    const isPending = !result && !isInProgress
+                    return (
+                      <div key={i} className={`result-sidebar-item ${result && i === selectedResultIndex ? 'active' : ''} ${isPending || isInProgress ? 'sidebar-pending' : ''}`}>
+                        <button
+                          className="result-sidebar-item-btn"
+                          onClick={() => { if (result) { setSelectedResultIndex(i); setSelectedBlock(null); setSelectedRegion(null) } }}
+                          disabled={!result}
+                          title={img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
+                        >
+                          <div className="result-sidebar-thumb-wrap">
+                            <img src={result ? result.imageDataUrl : img.thumbnailDataUrl} alt={img.fileName} />
+                            {isInProgress && <div className="sidebar-item-spinner" />}
+                          </div>
+                          <span className="result-sidebar-label">
+                            {img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
+                          </span>
+                        </button>
+                        <button
+                          className="sidebar-item-delete"
+                          onClick={() => handleRemoveImage(i)}
+                          title={lang === 'ja' ? '削除' : 'Delete'}
+                        >×</button>
                       </div>
-                      <span className="result-sidebar-label">
-                        {img.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : img.fileName}
-                      </span>
-                    </button>
-                  )
-                })}
+                    )
+                  })}
+                </div>
+                <div className="sidebar-toolbar">
+                  <button onClick={() => addFileInputRef.current?.click()} title={lang === 'ja' ? '画像を追加' : 'Add images'}>＋</button>
+                  <button onClick={handleClearAllImages} title={lang === 'ja' ? '全削除' : 'Delete all'}>🗑</button>
+                </div>
+                <input ref={addFileInputRef} type="file" accept="image/*,.pdf,.tiff,.tif,.heic,.heif" multiple hidden onChange={handleAddFiles} />
               </div>
             )}
 
