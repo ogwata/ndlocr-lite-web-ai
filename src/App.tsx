@@ -222,7 +222,9 @@ export default function App() {
       const img = processedImages[i]
       const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
       const line = `──────────── ${label} ────────────`
+      const excluded = excludedBlocksMap[result.id] ?? new Set<number>()
       const text = result.textBlocks
+        .filter(b => !excluded.has(b.readingOrder))
         .slice()
         .sort((a, b) => a.readingOrder - b.readingOrder)
         .map(b => b.text)
@@ -238,7 +240,7 @@ export default function App() {
     a.download = 'ocr-batch-result.txt'
     a.click()
     URL.revokeObjectURL(url)
-  }, [resultSelectedIndices, sessionResults, processedImages])
+  }, [resultSelectedIndices, sessionResults, processedImages, excludedBlocksMap])
 
   // 領域選択状態
   const [selectedRegion, setSelectedRegion] = useState<BoundingBox | null>(null)
@@ -394,7 +396,9 @@ export default function App() {
       const img = processedImages[i]
       const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
       const line = `──────────── ${label} ────────────`
+      const excluded = excludedBlocksMap[result.id] ?? new Set<number>()
       const text = result.textBlocks
+        .filter(b => !excluded.has(b.readingOrder))
         .slice()
         .sort((a, b) => a.readingOrder - b.readingOrder)
         .map(b => b.text)
@@ -410,7 +414,7 @@ export default function App() {
       processingTimeMs: 0,
       createdAt: Date.now(),
     }
-  }, [resultSelectedIndices, sessionResults, processedImages])
+  }, [resultSelectedIndices, sessionResults, processedImages, excludedBlocksMap])
 
   const isMergedMode = mergedResult !== null
   const editorResult = isMergedMode ? mergedResult : effectiveResult
@@ -425,7 +429,9 @@ export default function App() {
         if (!result) return null
         const img = processedImages[i]
         const label = img?.pageIndex ? `${img.fileName} (p.${img.pageIndex})` : (img?.fileName ?? `page ${i + 1}`)
+        const excluded = excludedBlocksMap[result.id] ?? new Set<number>()
         const text = result.textBlocks
+          .filter(b => !excluded.has(b.readingOrder))
           .slice()
           .sort((a, b) => a.readingOrder - b.readingOrder)
           .map(b => b.text)
@@ -433,7 +439,7 @@ export default function App() {
         return { imageDataUrl: result.imageDataUrl, text, label }
       })
       .filter((s): s is { imageDataUrl: string; text: string; label: string } => s !== null)
-  }, [resultSelectedIndices, sessionResults, processedImages])
+  }, [resultSelectedIndices, sessionResults, processedImages, excludedBlocksMap])
 
   const selectedPageBlockText = useMemo(() => {
     if (!selectedPageBlock || !currentResult) return null
