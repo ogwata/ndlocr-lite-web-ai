@@ -253,15 +253,30 @@ export function TextEditor({
 
     let newText: string
     if (blocks.length > 0) {
-      // ブロック座標がある場合: 間隔から段落区切りを判定
+      // ブロック座標がある場合: 間隔＋行の短さから段落区切りを判定
       const lines = displayText.split('\n')
       const paragraphBreaks = new Set<number>()
+
+      // 行テキスト長の中央値を算出し、短い行の閾値を決定
+      const textLengths = lines.map(l => l.length).filter(l => l > 0)
+      const sortedLengths = [...textLengths].sort((a, b) => a - b)
+      const medianLength = sortedLengths[Math.floor(sortedLengths.length / 2)] ?? 0
+      const shortLineThreshold = medianLength * 0.5
+
       for (let i = 0; i < blocks.length - 1; i++) {
         const current = blocks[i]
         const next = blocks[i + 1]
         const gap = next.y - (current.y + current.height)
         const avgHeight = (current.height + next.height) / 2
+        // 間隔が大きい場合: 段落区切り
         if (gap > avgHeight * 0.5) {
+          paragraphBreaks.add(i)
+        }
+        // 現在の行または次の行が短い場合: タイトル・見出し・リスト項目とみなす
+        if (lines[i] && lines[i].length < shortLineThreshold) {
+          paragraphBreaks.add(i)
+        }
+        if (lines[i + 1] && lines[i + 1].length < shortLineThreshold) {
           paragraphBreaks.add(i)
         }
       }
