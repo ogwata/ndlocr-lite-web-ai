@@ -1,0 +1,29 @@
+# .github/dependabot.yml
+# npm リポジトリ用（ndlocr-lite-web-ai / book-post-generator 共通）
+# 配置先: 各リポジトリの デフォルトブランチ 直下の .github/dependabot.yml
+#   - ndlocr-lite-web-ai … main ブランチ
+#   - book-post-generator … master ブランチ
+# Dependabot は自動でデフォルトブランチを対象にするため target-branch の指定は不要です。
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "08:00"
+      timezone: "Asia/Tokyo"
+    # 一度に開くPRが増えすぎないよう上限を設定（必要に応じて調整）
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    # パッチ＋マイナーは1つのPRにまとめて「選びやすく」、
+    # メジャー（破壊的変更の可能性）は個別PRにしてレビューしやすくする
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    # メジャー更新は groups に含めない → それぞれ独立したPRになる
