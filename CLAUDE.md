@@ -371,3 +371,8 @@ Cross-Origin-Embedder-Policy: require-corp
 - **upstream:** yuta1984/ndlocrlite-web（フォーク元）
 - **元のOCRエンジン:** ndl-lab/ndlocr-lite
 - **UI拡張元:** somiyagawa/ndlocr-lite-web-ai-deluxe（宮川創氏）
+
+## STATUS.md の維持(nagame ダッシュボード用)
+- 作業の節目(コミット直後、タスクの完了・中断時、セッション終了前)に、リポジトリ直下の STATUS.md を必ず更新する(なければ作成する)。
+- `状態:` を現状に合わせて書き換える(作業中/レビュー待ち/停滞/安定 など)。
+- `次:` に「次に着手すべきこと」を1行で書き換える。完了した項目を残さない。
