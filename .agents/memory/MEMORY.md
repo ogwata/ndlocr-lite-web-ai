@@ -1,0 +1,3 @@
+- [バージョン番号は必ず更新する](feedback_version_numbers.md) — コミット時にHeader/package.json/exportTEIのバージョンを忘れず更新。ユーザーが目安にしている
+- [実装前に議論する](feedback_discuss_before_impl.md) — 勝手に実装を始めない。ユーザーが納得するまで議論してから実装する
+- [コミット・プッシュ・ドキュメントのルール](feedback_commit_push_rules.md) — プッシュはユーザー指示まで待つ。コミットはClaudeの判断でOK。変更はドキュメントに即時反映
